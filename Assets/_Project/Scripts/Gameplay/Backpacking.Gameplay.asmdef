@@ -1,0 +1,17 @@
+{
+  "name": "Backpacking.Gameplay",
+  "rootNamespace": "Backpacking.Gameplay",
+  "references": [
+    "Backpacking.Data",
+    "Unity.InputSystem"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

@@ -1,0 +1,16 @@
+{
+  "name": "Backpacking.Utilities",
+  "rootNamespace": "Backpacking.Utilities",
+  "references": [
+    "Backpacking.Data"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

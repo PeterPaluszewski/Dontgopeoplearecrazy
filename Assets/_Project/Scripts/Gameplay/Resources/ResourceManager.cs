@@ -75,37 +75,73 @@ namespace Backpacking.Gameplay
             OnEnergyChanged?.Invoke(currentEnergy, maxEnergy);
         }
 
-        public void ConsumeFood(float amount)
+        public bool ConsumeFood(float amount)
         {
+            if (currentFood < amount)
+            {
+                return false;
+            }
+
             currentFood = Mathf.Max(0, currentFood - amount);
             OnFoodChanged?.Invoke(currentFood, maxFood);
-            
+
             if (currentFood <= 0)
             {
                 OnResourceDepleted?.Invoke(ResourceType.Food);
             }
+
+            return true;
         }
 
-        public void ConsumeWater(float amount)
+        public bool HasEnoughFood(float amount)
         {
+            return currentFood >= amount;
+        }
+
+        public bool ConsumeWater(float amount)
+        {
+            if (currentWater < amount)
+            {
+                return false;
+            }
+
             currentWater = Mathf.Max(0, currentWater - amount);
             OnWaterChanged?.Invoke(currentWater, maxWater);
-            
+
             if (currentWater <= 0)
             {
                 OnResourceDepleted?.Invoke(ResourceType.Water);
             }
+
+            return true;
         }
 
-        public void ConsumeEnergy(float amount)
+        public bool HasEnoughWater(float amount)
         {
+            return currentWater >= amount;
+        }
+
+        public bool ConsumeEnergy(float amount)
+        {
+            if (currentEnergy < amount)
+            {
+                return false;
+            }
+
             currentEnergy = Mathf.Max(0, currentEnergy - amount);
             OnEnergyChanged?.Invoke(currentEnergy, maxEnergy);
-            
+
             if (currentEnergy <= 0)
             {
                 OnResourceDepleted?.Invoke(ResourceType.Energy);
             }
+
+            return true;
+        }
+
+        public bool HasEnoughEnergy(float amount)
+        {
+            return currentEnergy >= amount;
         }
 
         public void SetFood(float amount)
@@ -134,6 +170,14 @@ namespace Backpacking.Gameplay
         public bool IsAnyResourceDepleted()
         {
             return currentFood <= 0 || currentWater <= 0 || currentEnergy <= 0;
+        }
+
+        public void RestoreAllResources()
+        {
+            currentFood = maxFood;
+            currentWater = maxWater;
+            currentEnergy = maxEnergy;
+            NotifyResourceChanges();
         }
 
         private void NotifyResourceChanges()
