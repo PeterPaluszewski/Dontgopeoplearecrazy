@@ -24,7 +24,7 @@ namespace Backpacking.Core
 
         private void Update()
         {
-            if (autoSave && GameManager.Instance.IsGameActive)
+            if (autoSave && GameManager.Instance != null && GameManager.Instance.IsGameActive)
             {
                 autoSaveTimer += Time.deltaTime;
                 if (autoSaveTimer >= autoSaveInterval)
