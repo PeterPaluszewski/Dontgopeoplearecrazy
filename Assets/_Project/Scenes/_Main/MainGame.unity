@@ -392,6 +392,10 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1392895688}
+  - component: {fileID: 1392895692}
+  - component: {fileID: 1392895691}
+  - component: {fileID: 1392895690}
+  - component: {fileID: 1392895689}
   m_Layer: 0
   m_Name: GameSystems
   m_TagString: Untagged
@@ -414,6 +418,72 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1392895689
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1392895687}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea96de125ca7dff439787b10f5830558, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Backpacking.Gameplay.InventoryManager
+  maxSlots: 12
+  maxWeight: 20
+--- !u!114 &1392895690
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1392895687}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39a2ee29c8448b344a85b80b22f611be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Backpacking.Gameplay.ResourceManager
+  startingFood: 100
+  startingWater: 100
+  startingEnergy: 100
+  maxFood: 100
+  maxWater: 100
+  maxEnergy: 100
+  currentFood: 0
+  currentWater: 0
+  currentEnergy: 0
+--- !u!114 &1392895691
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1392895687}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a573c17931027d4409911e383654342f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Backpacking.Core.SaveManager
+  useFileSystem: 1
+  autoSave: 1
+  autoSaveInterval: 300
+--- !u!114 &1392895692
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1392895687}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2e33fe00a7196434ab83df2669662aff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Backpacking.Core.GameManager
+  isGameActive: 0
+  saveManager: {fileID: 0}
+  inventoryManager: {fileID: 0}
+  resourceManager: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
