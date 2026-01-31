@@ -48,6 +48,7 @@ namespace Backpacking.Core
                 
             if (resourceManager == null)
                 resourceManager = FindObjectOfType<ResourceManager>();
+            
         }
 
         public void StartNewGame()
