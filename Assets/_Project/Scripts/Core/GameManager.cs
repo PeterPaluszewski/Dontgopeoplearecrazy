@@ -1,4 +1,5 @@
 using UnityEngine;
+using Backpacking.Gameplay;
 
 namespace Backpacking.Core
 {
