@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 899e130d25a151a4fa1d637bd8fa9a12, type: 3}
+  m_Name: Start
+  m_EditorClassIdentifier: Assembly-CSharp::Backpacking.Data.LocationData
+  locationName: New York
+  description: Location description
+  locationIcon: {fileID: 0}
+  latitude: 40.7
+  longitude: -74
+  locationType: 1
+  isStartingLocation: 1
+  isFinalDestination: 0
+  canRest: 1
+  canBuySupplies: 1
+  hasShelter: 1
+  travelDays: 1
+  difficultyMultiplier: 1
+  connectedLocations: []
