@@ -1,6 +1,7 @@
 using UnityEngine;
 using System;
 using System.IO;
+using Backpacking.Gameplay;
 
 namespace Backpacking.Core
 {
@@ -12,7 +13,7 @@ namespace Backpacking.Core
     {
         private const string SAVE_FILE_NAME = "savegame.json";
         private const string SAVE_KEY = "BackpackingSaveData";
-        
+
         [Header("Save Settings")]
         [SerializeField] private bool useFileSystem = true; // If false, uses PlayerPrefs
         [SerializeField] private bool autoSave = true;
@@ -142,12 +143,12 @@ namespace Backpacking.Core
             {
                 saveVersion = 1,
                 saveTimestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
-                
+
                 // Player resources
                 currentFood = ResourceManager.Instance?.CurrentFood ?? 0,
                 currentWater = ResourceManager.Instance?.CurrentWater ?? 0,
                 currentEnergy = ResourceManager.Instance?.CurrentEnergy ?? 0,
-                
+
                 // TODO: Add inventory data
                 // TODO: Add current location
                 // TODO: Add game progress
@@ -159,7 +160,7 @@ namespace Backpacking.Core
         private void ApplySaveData(SaveData data)
         {
             Debug.Log($"[SaveManager] Applying save data (Version: {data.saveVersion}, Saved: {data.saveTimestamp})");
-            
+
             // Restore resources
             if (ResourceManager.Instance != null)
             {
@@ -167,7 +168,7 @@ namespace Backpacking.Core
                 ResourceManager.Instance.SetWater(data.currentWater);
                 ResourceManager.Instance.SetEnergy(data.currentEnergy);
             }
-            
+
             // TODO: Restore inventory
             // TODO: Restore location
             // TODO: Restore game progress
@@ -182,12 +183,12 @@ namespace Backpacking.Core
     {
         public int saveVersion;
         public string saveTimestamp;
-        
+
         // Resources
         public float currentFood;
         public float currentWater;
         public float currentEnergy;
-        
+
         // TODO: Add inventory array
         // TODO: Add current location ID
         // TODO: Add visited locations

@@ -13,7 +13,7 @@ namespace Backpacking.Core
 
         [Header("Game State")]
         [SerializeField] private bool isGameActive = false;
-        
+
         [Header("System References")]
         [SerializeField] private SaveManager saveManager;
         [SerializeField] private InventoryManager inventoryManager;
@@ -39,30 +39,30 @@ namespace Backpacking.Core
         private void InitializeSystems()
         {
             Debug.Log("[GameManager] Initializing game systems...");
-            
+
             // Initialize core systems
             if (saveManager == null)
                 saveManager = GetComponent<SaveManager>();
-            
+
             if (inventoryManager == null)
-                inventoryManager = FindObjectOfType<InventoryManager>();
-                
+                inventoryManager = FindFirstObjectByType<InventoryManager>();
+
             if (resourceManager == null)
-                resourceManager = FindObjectOfType<ResourceManager>();
-            
+                resourceManager = FindFirstObjectByType<ResourceManager>();
+
         }
 
         public void StartNewGame()
         {
             Debug.Log("[GameManager] Starting new game...");
             isGameActive = true;
-            
+
             // Initialize player resources
             resourceManager?.InitializeResources();
-            
+
             // Clear inventory
             inventoryManager?.ClearInventory();
-            
+
             // TODO: Load starting location
             // TODO: Give player starting items
         }
@@ -70,7 +70,7 @@ namespace Backpacking.Core
         public void LoadGame()
         {
             Debug.Log("[GameManager] Loading saved game...");
-            
+
             if (saveManager != null && saveManager.HasSaveData())
             {
                 saveManager.LoadGame();
@@ -92,7 +92,7 @@ namespace Backpacking.Core
         {
             Debug.Log("[GameManager] Quitting game...");
             SaveGame();
-            
+
 #if UNITY_EDITOR
             UnityEditor.EditorApplication.isPlaying = false;
 #else
