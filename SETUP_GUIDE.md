@@ -205,15 +205,77 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
-## 5. Next Development Steps
+## 5. Verify Setup
 
-1. **Create Auth Pages**: Login and registration forms in `src/app/auth/`
-2. **Build Globe Component**: Interactive 3D globe in `src/components/Globe/`
-3. **Create Game UI**: Resource bars, inventory panel in `src/components/UI/`
-4. **Implement Game Logic**: Travel mechanics, random events, resource consumption
-5. **Add Save/Load**: Connect Zustand store to Supabase for cloud saves
+After starting the dev server, you should be able to:
 
-## 6. Deployment
+1. ✅ **See the landing page** at http://localhost:3000
+2. ✅ **Register a new account** at http://localhost:3000/auth/register
+3. ✅ **Log in** at http://localhost:3000/auth/login
+4. ✅ **Access the game** at http://localhost:3000/game
+5. ✅ **See the 3D globe** with 10 city markers
+6. ✅ **Click a location** to view details
+7. ✅ **Click "Travel Here"** to open travel modal
+8. ✅ **Confirm travel** to move between cities
+9. ✅ **See random events** (30% chance after travel)
+10. ✅ **Manage inventory** and use items
+
+## 6. Current Features
+
+### ✅ Completed (Phase 8)
+
+- **Authentication**: Login, register, protected routes
+- **3D Globe**: Interactive Earth with 10 European cities
+- **Resource Management**: Food, water, energy bars with warnings
+- **Inventory System**: 25kg weight limit, use/drop items
+- **Location Info**: City details, difficulty, travel time
+- **Travel System**: Cost calculation, modal preview, validation
+- **Random Events**: 30% trigger chance, resource effects
+- **Testing**: 125 tests passing with full coverage
+
+### 🚧 To Be Implemented (Phase 9)
+
+- **Save/Load System**: Connect to game_states table
+- **Auto-save**: On location change
+- **Multiple Save Slots**: Choose which save to load
+
+## 7. Next Development Steps
+
+1. **Implement Save/Load** (Phase 9 - Next)
+   - Create saveGame function in `src/lib/database.ts`
+   - Add save/load buttons to game UI
+   - Connect Zustand store to Supabase game_states
+   - Test save persistence across sessions
+
+2. **Future Enhancements** (Post-MVP)
+   - Crafting system (combine items)
+   - Quest/achievement system
+   - Multiplayer features (see other players)
+   - Mobile optimization
+
+## 8. Testing
+
+Run all tests:
+
+```bash
+npm test
+```
+
+Run specific test:
+
+```bash
+npx vitest src/components/TravelModal/TravelModal.test.tsx
+```
+
+Watch mode for development:
+
+```bash
+npx vitest --watch
+```
+
+Expected output: **125 tests passing** ✅
+
+## 9. Deployment
 
 When ready to deploy:
 
