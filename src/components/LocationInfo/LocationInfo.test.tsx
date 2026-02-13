@@ -1,8 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import LocationInfo from './LocationInfo';
-import type { Location } from '@/types/game';
 import { useGameStore } from '@/store/gameStore';
+import type { Location } from '@/types/game';
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import LocationInfo from './LocationInfo';
 
 // Mock the game store
 vi.mock('@/store/gameStore', () => ({

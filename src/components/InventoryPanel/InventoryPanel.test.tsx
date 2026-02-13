@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
-import InventoryPanel from './InventoryPanel';
 import { useGameStore } from '@/store/gameStore';
-import type { Item, InventoryItem } from '@/types/game';
+import type { InventoryItem, Item } from '@/types/game';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import InventoryPanel from './InventoryPanel';
 
 // Mock the game store
 vi.mock('@/store/gameStore', () => ({

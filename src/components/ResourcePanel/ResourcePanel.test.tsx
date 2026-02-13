@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import ResourcePanel from './ResourcePanel';
 import { useGameStore } from '@/store/gameStore';
+import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import ResourcePanel from './ResourcePanel';
 
 // Mock the game store
 vi.mock('@/store/gameStore', () => ({
