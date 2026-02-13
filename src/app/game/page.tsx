@@ -1,9 +1,9 @@
 'use client';
 
 import { createClient } from '@/lib/supabase';
+import type { User } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import type { User } from '@supabase/supabase-js';
 
 export default function GamePage() {
   const [user, setUser] = useState<User | null>(null);
