@@ -1,0 +1,68 @@
+import * as THREE from 'three';
+import type { Location } from '@/types/game';
+
+/**
+ * Convert latitude and longitude to 3D Cartesian coordinates
+ * @param lat Latitude in degrees (-90 to 90)
+ * @param lon Longitude in degrees (-180 to 180)
+ * @param radius Radius of the sphere
+ * @returns THREE.Vector3 position
+ */
+export function latLonToVector3(lat: number, lon: number, radius: number): THREE.Vector3 {
+  const phi = (90 - lat) * (Math.PI / 180);
+  const theta = (lon + 180) * (Math.PI / 180);
+
+  const x = -(radius * Math.sin(phi) * Math.cos(theta));
+  const z = radius * Math.sin(phi) * Math.sin(theta);
+  const y = radius * Math.cos(phi);
+
+  return new THREE.Vector3(x, y, z);
+}
+
+/**
+ * Create a marker position slightly above the globe surface
+ * @param lat Latitude in degrees
+ * @param lon Longitude in degrees
+ * @param globeRadius Radius of the globe
+ * @param height Height above surface
+ */
+export function getMarkerPosition(
+  lat: number,
+  lon: number,
+  globeRadius: number,
+  height: number = 0.1
+): THREE.Vector3 {
+  return latLonToVector3(lat, lon, globeRadius + height);
+}
+
+/**
+ * Calculate the distance between two locations on Earth
+ * Uses the Haversine formula
+ * @param loc1 First location
+ * @param loc2 Second location
+ * @returns Distance in kilometers
+ */
+export function calculateDistance(loc1: Location, loc2: Location): number {
+  const R = 6371; // Earth's radius in km
+  const dLat = ((loc2.latitude - loc1.latitude) * Math.PI) / 180;
+  const dLon = ((loc2.longitude - loc1.longitude) * Math.PI) / 180;
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((loc1.latitude * Math.PI) / 180) *
+      Math.cos((loc2.latitude * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
+ * Get the color for a location marker based on its status
+ */
+export function getMarkerColor(isVisited: boolean, isCurrent: boolean): string {
+  if (isCurrent) return '#10b981'; // Green for current location
+  if (isVisited) return '#3b82f6'; // Blue for visited
+  return '#6b7280'; // Gray for unvisited
+}
