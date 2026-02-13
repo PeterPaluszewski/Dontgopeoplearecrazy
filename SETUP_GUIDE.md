@@ -19,7 +19,8 @@ This guide will help you set up the full development environment for the backpac
 1. Go to Project Settings → API
 2. Copy these values to your `.env.local` file:
    - **Project URL** → `NEXT_PUBLIC_SUPABASE_URL`
-   - **anon public key** → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - **Publishable key** (sb*publishable*...) → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - Note: Use the new "publishable key", not the legacy "anon" key
 
 ### Database Schema
 
@@ -178,7 +179,7 @@ Create a `.env.local` file in the root directory:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_your-publishable-key-here
 ```
 
 **Important**: Never commit `.env.local` to git. It's already in `.gitignore`.
