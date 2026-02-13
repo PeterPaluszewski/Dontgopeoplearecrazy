@@ -226,15 +226,18 @@ When ready to deploy:
 ## Troubleshooting
 
 ### Supabase Connection Issues
+
 - Verify environment variables are set correctly
 - Check Supabase project is not paused (free tier pauses after inactivity)
 - Ensure API keys are copied correctly
 
 ### Three.js Errors
+
 - Three.js only works in browser, not during SSR
 - Use dynamic imports with `ssr: false` for globe component
 
 ### Database Errors
+
 - Run database schema SQL before trying to query
 - Check RLS policies if getting permission errors
 - Verify foreign key relationships are correct
