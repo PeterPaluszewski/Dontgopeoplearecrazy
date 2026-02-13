@@ -1,11 +1,11 @@
 'use client';
 
-import { Canvas } from '@react-three/fiber';
+import type { Location } from '@/types/game';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
+import { Canvas } from '@react-three/fiber';
 import { Suspense, useState } from 'react';
 import GlobeSphere from './GlobeSphere';
 import LocationMarker from './LocationMarker';
-import type { Location } from '@/types/game';
 
 interface GlobeProps {
   locations: Location[];
@@ -34,20 +34,21 @@ export default function Globe({
           <directionalLight position={[5, 5, 5]} intensity={1} />
           <pointLight position={[-5, -5, -5]} intensity={0.5} />
 
-          {/* Globe */}
-          <GlobeSphere />
-
-          {/* Location Markers */}
-          {locations.map((location) => (
-            <LocationMarker
-              key={location.id}
-              location={location}
-              isCurrent={location.id === currentLocationId}
-              isVisited={visitedLocationIds.includes(location.id)}
-              onClick={() => onLocationClick(location)}
-              onHover={(hovered) => setHoveredLocation(hovered ? location : null)}
-            />
-          ))}
+          {/* Globe and Markers - grouped together so they rotate as one */}
+          <group>
+            <GlobeSphere />
+            {/* Location Markers */}
+            {locations.map((location) => (
+              <LocationMarker
+                key={location.id}
+                location={location}
+                isCurrent={location.id === currentLocationId}
+                isVisited={visitedLocationIds.includes(location.id)}
+                onClick={() => onLocationClick(location)}
+                onHover={(hovered) => setHoveredLocation(hovered ? location : null)}
+              />
+            ))}
+          </group>
 
           {/* Controls for rotation and zoom */}
           <OrbitControls
