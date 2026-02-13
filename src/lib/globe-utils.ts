@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import type { Location } from '@/types/game';
 
 /**
  * Convert latitude and longitude to 3D Cartesian coordinates
@@ -38,11 +37,14 @@ export function getMarkerPosition(
 /**
  * Calculate the distance between two locations on Earth
  * Uses the Haversine formula
- * @param loc1 First location
- * @param loc2 Second location
+ * @param loc1 First location (must have latitude and longitude)
+ * @param loc2 Second location (must have latitude and longitude)
  * @returns Distance in kilometers
  */
-export function calculateDistance(loc1: Location, loc2: Location): number {
+export function calculateDistance(
+  loc1: { latitude: number; longitude: number },
+  loc2: { latitude: number; longitude: number }
+): number {
   const R = 6371; // Earth's radius in km
   const dLat = ((loc2.latitude - loc1.latitude) * Math.PI) / 180;
   const dLon = ((loc2.longitude - loc1.longitude) * Math.PI) / 180;
