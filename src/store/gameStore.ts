@@ -1,3 +1,4 @@
+import { TravelCost } from '@/lib/travel-utils';
 import { GameState, InventoryItem, Item } from '@/types/game';
 import { create } from 'zustand';
 
@@ -7,6 +8,7 @@ interface GameStore extends Omit<GameState, 'userId' | 'createdAt' | 'updatedAt'
   removeInventoryItem: (itemId: string, quantity: number) => void;
   setCurrentLocation: (locationId: string) => void;
   visitLocation: (locationId: string) => void;
+  travelToLocation: (locationId: string, cost: TravelCost) => void;
   resetGame: () => void;
   loadGame: (gameState: GameState) => void;
 }
@@ -67,6 +69,27 @@ export const useGameStore = create<GameStore>((set) => ({
     set((state) => ({
       visitedLocationIds: [...state.visitedLocationIds, locationId],
     })),
+
+  travelToLocation: (locationId, cost) =>
+    set((state) => {
+      // Deduct travel costs
+      const newFood = Math.max(0, state.food - cost.food);
+      const newWater = Math.max(0, state.water - cost.water);
+      const newEnergy = Math.max(0, state.energy - cost.energy);
+
+      // Mark as visited if not already
+      const newVisitedIds = state.visitedLocationIds.includes(locationId)
+        ? state.visitedLocationIds
+        : [...state.visitedLocationIds, locationId];
+
+      return {
+        currentLocationId: locationId,
+        food: newFood,
+        water: newWater,
+        energy: newEnergy,
+        visitedLocationIds: newVisitedIds,
+      };
+    }),
 
   resetGame: () => set(initialState),
 

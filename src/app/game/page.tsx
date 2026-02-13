@@ -1,10 +1,14 @@
 'use client';
 
+import EventModal from '@/components/EventModal/EventModal';
 import InventoryPanel from '@/components/InventoryPanel/InventoryPanel';
 import LocationInfo from '@/components/LocationInfo/LocationInfo';
 import ResourcePanel from '@/components/ResourcePanel/ResourcePanel';
+import TravelModal from '@/components/TravelModal/TravelModal';
 import { getAllLocations } from '@/lib/database';
+import { GameEvent, triggerRandomEvent } from '@/lib/events';
 import { createClient } from '@/lib/supabase';
+import { calculateTravelCost } from '@/lib/travel-utils';
 import { useGameStore } from '@/store/gameStore';
 import type { Location } from '@/types/game';
 import type { User } from '@supabase/supabase-js';
@@ -27,8 +31,12 @@ export default function GamePage() {
   const [loading, setLoading] = useState(true);
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [travelModalOpen, setTravelModalOpen] = useState(false);
+  const [travelDestination, setTravelDestination] = useState<Location | null>(null);
+  const [currentEvent, setCurrentEvent] = useState<GameEvent | null>(null);
+  const [eventModalOpen, setEventModalOpen] = useState(false);
   const router = useRouter();
-  const { currentLocationId, visitedLocationIds, visitLocation } = useGameStore();
+  const { currentLocationId, visitedLocationIds, visitLocation, travelToLocation } = useGameStore();
 
   useEffect(() => {
     const checkUser = async () => {
@@ -72,12 +80,31 @@ export default function GamePage() {
   };
 
   const handleLocationClick = (location: Location) => {
-    // TODO: Check if location is reachable from current location
-    // TODO: Implement travel cost calculation (days, resource consumption)
-    // TODO: Show travel confirmation modal with costs
-    console.log('Selected location:', location.name);
     setSelectedLocation(location);
-    visitLocation(location.id);
+  };
+
+  const handleTravelClick = (destination: Location) => {
+    setTravelDestination(destination);
+    setTravelModalOpen(true);
+  };
+
+  const handleTravelConfirm = async () => {
+    if (!travelDestination) return;
+
+    const cost = calculateTravelCost(
+      travelDestination.travelDays,
+      travelDestination.difficultyMultiplier
+    );
+    travelToLocation(travelDestination.id, cost);
+    setSelectedLocation(travelDestination);
+    setTravelDestination(null);
+
+    // Trigger random event (30% chance)
+    const event = await triggerRandomEvent(0.3);
+    if (event) {
+      setCurrentEvent(event);
+      setEventModalOpen(true);
+    }
   };
 
   if (loading) {
@@ -117,7 +144,7 @@ export default function GamePage() {
 
         {/* Right Panel - Location Info */}
         <div className="absolute top-4 right-4 w-96 z-10">
-          <LocationInfo location={selectedLocation} />
+          <LocationInfo location={selectedLocation} onTravelClick={handleTravelClick} />
         </div>
 
         {/* Globe - Full screen */}
@@ -127,6 +154,28 @@ export default function GamePage() {
           visitedLocationIds={visitedLocationIds}
           onLocationClick={handleLocationClick}
         />
+
+        {/* Travel Modal */}
+        {travelDestination && (
+          <TravelModal
+            destination={travelDestination}
+            isOpen={travelModalOpen}
+            onClose={() => setTravelModalOpen(false)}
+            onConfirm={handleTravelConfirm}
+          />
+        )}
+
+        {/* Event Modal */}
+        {currentEvent && (
+          <EventModal
+            event={currentEvent}
+            isOpen={eventModalOpen}
+            onClose={() => {
+              setEventModalOpen(false);
+              setCurrentEvent(null);
+            }}
+          />
+        )}
       </main>
     </div>
   );
