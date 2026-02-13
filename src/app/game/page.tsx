@@ -1,13 +1,16 @@
 'use client';
 
-import { createClient } from '@/lib/supabase';
+import InventoryPanel from '@/components/InventoryPanel/InventoryPanel';
+import LocationInfo from '@/components/LocationInfo/LocationInfo';
+import ResourcePanel from '@/components/ResourcePanel/ResourcePanel';
 import { getAllLocations } from '@/lib/database';
+import { createClient } from '@/lib/supabase';
 import { useGameStore } from '@/store/gameStore';
-import type { User } from '@supabase/supabase-js';
 import type { Location } from '@/types/game';
+import type { User } from '@supabase/supabase-js';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import dynamic from 'next/dynamic';
 
 // Dynamically import Globe to prevent SSR issues with Three.js
 const Globe = dynamic(() => import('@/components/Globe/Globe'), {
@@ -23,6 +26,7 @@ export default function GamePage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const router = useRouter();
   const { currentLocationId, visitedLocationIds, visitLocation } = useGameStore();
 
@@ -48,6 +52,10 @@ export default function GamePage() {
       if (!currentLocationId && locs.length > 0) {
         const paris = locs.find((loc) => loc.name === 'Paris') || locs[0];
         visitLocation(paris.id);
+        setSelectedLocation(paris);
+      } else if (currentLocationId) {
+        const current = locs.find((loc) => loc.id === currentLocationId);
+        setSelectedLocation(current || null);
       }
 
       setLoading(false);
@@ -68,6 +76,7 @@ export default function GamePage() {
     // TODO: Implement travel cost calculation (days, resource consumption)
     // TODO: Show travel confirmation modal with costs
     console.log('Selected location:', location.name);
+    setSelectedLocation(location);
     visitLocation(location.id);
   };
 
@@ -100,6 +109,18 @@ export default function GamePage() {
       </nav>
 
       <main className="flex-1 relative overflow-hidden">
+        {/* Left Panel - Resources */}
+        <div className="absolute top-4 left-4 w-80 z-10 space-y-4">
+          <ResourcePanel />
+          <InventoryPanel />
+        </div>
+
+        {/* Right Panel - Location Info */}
+        <div className="absolute top-4 right-4 w-96 z-10">
+          <LocationInfo location={selectedLocation} />
+        </div>
+
+        {/* Globe - Full screen */}
         <Globe
           locations={locations}
           currentLocationId={currentLocationId}
