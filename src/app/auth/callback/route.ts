@@ -10,6 +10,6 @@ export async function GET(request: Request) {
     await supabase.auth.exchangeCodeForSession(code);
   }
 
-  // Redirect to game after successful authentication
-  return NextResponse.redirect(new URL('/game', request.url));
+  // Redirect to menu after successful authentication
+  return NextResponse.redirect(new URL('/menu', request.url));
 }

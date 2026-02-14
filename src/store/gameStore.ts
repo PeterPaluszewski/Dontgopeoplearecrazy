@@ -8,10 +8,12 @@ interface GameStore extends Omit<GameState, 'userId' | 'createdAt' | 'updatedAt'
   addInventoryItem: (item: Item, quantity: number) => void;
   removeInventoryItem: (itemId: string, quantity: number) => void;
   setCurrentLocation: (locationId: string) => void;
+  setCurrentLocationId: (locationId: string) => void;
   visitLocation: (locationId: string) => void;
   travelToLocation: (locationId: string, cost: TravelCost) => void;
   resetGame: () => void;
   loadGame: (gameState: GameState) => void;
+  loadGameState: (gameState: GameState) => void;
   saveGame: () => Promise<{ success: boolean; error?: string }>;
   loadGameFromDB: () => Promise<{ success: boolean; error?: string }>;
 }
@@ -25,6 +27,8 @@ const initialState = {
   inventory: [] as InventoryItem[],
   visitedLocationIds: [] as string[],
   isActive: false,
+  difficulty: undefined as 'easy' | 'normal' | 'hard' | undefined,
+  characterName: undefined as string | undefined,
 };
 
 export const useGameStore = create<GameStore>((set) => ({
@@ -68,6 +72,8 @@ export const useGameStore = create<GameStore>((set) => ({
 
   setCurrentLocation: (locationId) => set({ currentLocationId: locationId }),
 
+  setCurrentLocationId: (locationId) => set({ currentLocationId: locationId }),
+
   visitLocation: (locationId) =>
     set((state) => ({
       visitedLocationIds: [...state.visitedLocationIds, locationId],
@@ -106,6 +112,22 @@ export const useGameStore = create<GameStore>((set) => ({
       inventory: gameState.inventory,
       visitedLocationIds: gameState.visitedLocationIds,
       isActive: gameState.isActive,
+      difficulty: gameState.difficulty,
+      characterName: gameState.characterName,
+    }),
+
+  loadGameState: (gameState) =>
+    set({
+      id: gameState.id,
+      currentLocationId: gameState.currentLocationId,
+      food: gameState.food,
+      water: gameState.water,
+      energy: gameState.energy,
+      inventory: gameState.inventory,
+      visitedLocationIds: gameState.visitedLocationIds,
+      isActive: gameState.isActive,
+      difficulty: gameState.difficulty,
+      characterName: gameState.characterName,
     }),
 
   saveGame: async () => {

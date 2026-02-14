@@ -140,11 +140,126 @@ vi.mock('@/components/Globe/Globe', () => ({
 
 ## CI/CD Integration
 
-Tests run automatically on:
+### Automated Test Runs
 
+Tests run automatically on:
 - Pre-commit hook (via Husky + lint-staged)
 - Pull requests
+- Pushes to main branch
 - Before production builds
+
+### Integration Tests in CI/CD
+
+Integration tests can run before deployment! See [Integration Test Setup](.github/INTEGRATION_TESTS_SETUP.md) for configuration.
+
+**Workflow:**
+1. Push code → Triggers GitHub Action
+2. Run unit tests (fast, always runs)
+3. Run integration tests (if credentials configured)
+4. Deploy to production (only if tests pass)
+
+**Setup Required:**
+```bash
+# Set GitHub secrets (one-time setup)
+gh secret set SUPABASE_URL --body "https://your-project.supabase.co"
+gh secret set SUPABASE_ANON_KEY --body "your-anon-key"
+gh secret set TEST_USER_EMAIL --body "test@example.com"
+gh secret set TEST_USER_PASSWORD --body "secure-password"
+```
+
+**Benefits:**
+- ✅ Catch database schema issues before production
+- ✅ Validate migrations work correctly
+- ✅ Test RLS policies
+- ✅ Prevent UUID bugs and constraint violations
+- ✅ Automatic rollback if tests fail
+
+## Integration Tests
+
+### Overview
+
+Integration tests use real database connections and are located in `src/**/__tests__/*.integration.test.ts`.
+
+**Key Benefits:**
+- Catch database schema mismatches (UUID vs string)
+- Validate constraints (CHECK, NOT NULL, foreign keys)
+- Test RLS policies
+- Verify migration correctness
+
+### Running Integration Tests
+
+```bash
+# Integration tests are SKIPPED by default
+npm test  # Skips integration tests
+
+# Run integration tests manually (requires login)
+SKIP_INTEGRATION_TESTS=false npm test -- src/lib/__tests__/save-load.integration.test.ts
+```
+
+**Prerequisites:**
+1. Run `npm run dev` and login through the UI
+2. Ensure database migrations are applied
+3. Have valid Supabase credentials in `.env.local`
+
+### Case Study: The UUID Bug
+
+**Problem:** NewGameModal used hardcoded string IDs (`'1'`, `'2'`) but database expects UUIDs.
+
+**Unit tests missed it** because mocks don't validate data types.
+
+**Integration test caught it:**
+```typescript
+it('should fail with descriptive error when location ID is not a valid UUID', async () => {
+  const result = await createNewGame('1', 'normal', 'Test Player');
+  expect(result.error).toContain('uuid'); // ✅ Fails immediately
+});
+```
+
+### When to Write Integration Tests
+
+✅ **Write integration tests for:**
+- Database operations (createNewGame, saveGame, deleteSave)
+- Authentication flows
+- File uploads
+- Payment processing
+- Any operation with external dependencies
+
+❌ **Don't need integration tests for:**
+- Pure functions
+- UI components with mocked data
+- Client-side state management
+
+### Best Practices
+
+1. **Clean up after tests:**
+```typescript
+afterAll(async () => {
+  for (const gameId of testGameIds) {
+    await deleteSave(gameId);
+  }
+});
+```
+
+2. **Test constraints:**
+```typescript
+it('should enforce foreign key constraint', async () => {
+  const fakeUuid = '00000000-0000-0000-0000-000000000000';
+  const { error } = await supabase.from('game_states').insert({
+    current_location_id: fakeUuid,
+    // ...
+  });
+  expect(error?.message).toMatch(/foreign key/i);
+});
+```
+
+3. **Use realistic test data:**
+```typescript
+const { data: location } = await supabase
+  .from('locations')
+  .select('id')
+  .limit(1)
+  .single();
+```
 
 ## Troubleshooting
 

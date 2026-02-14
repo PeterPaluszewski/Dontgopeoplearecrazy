@@ -6,6 +6,7 @@ import LocationInfo from '@/components/LocationInfo/LocationInfo';
 import ResourcePanel from '@/components/ResourcePanel/ResourcePanel';
 import SaveLoadPanel from '@/components/SaveLoadPanel/SaveLoadPanel';
 import TravelModal from '@/components/TravelModal/TravelModal';
+import InGameMenu from '@/components/Menu/InGameMenu';
 import { getAllLocations } from '@/lib/database';
 import { GameEvent, triggerRandomEvent } from '@/lib/events';
 import { createClient } from '@/lib/supabase';
@@ -28,6 +29,7 @@ const Globe = dynamic(() => import('@/components/Globe/Globe'), {
 });
 
 export default function GamePage() {
+  const [showInGameMenu, setShowInGameMenu] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [locations, setLocations] = useState<Location[]>([]);
@@ -61,7 +63,7 @@ export default function GamePage() {
       setUser(user);
 
       // Try to load saved game
-      const loadResult = await loadGameFromDB();
+      await loadGameFromDB();
 
       // Load locations
       const locs = await getAllLocations();
@@ -82,6 +84,18 @@ export default function GamePage() {
 
     checkUser();
   }, [router, currentLocationId, visitLocation, loadGameFromDB]);
+
+  // ESC key handler for in-game menu
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowInGameMenu((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -150,8 +164,22 @@ export default function GamePage() {
       </nav>
 
       <main className="flex-1 relative overflow-hidden">
-        {/* Left Panel - Resources */}
-        <div className="absolute top-4 left-4 w-80 z-10 space-y-4">
+        {/* Menu Button - Top Left */}
+        <button
+          onClick={() => setShowInGameMenu(true)}
+          className="absolute top-4 left-4 z-20 rounded-lg bg-slate-800/90 px-4 py-2 text-white shadow-lg backdrop-blur-sm transition-all hover:bg-slate-700 hover:scale-105"
+          title="Open Menu (ESC)"
+        >
+          <div className="flex items-center gap-2">
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            <span className="font-semibold">Menu</span>
+          </div>
+        </button>
+
+        {/* Left Panel - Resources and Inventory */}
+        <div className="absolute top-16 left-4 z-10 space-y-4">
           <ResourcePanel />
           <InventoryPanel />
           <SaveLoadPanel />
@@ -191,6 +219,12 @@ export default function GamePage() {
             }}
           />
         )}
+
+        {/* In-Game Menu (ESC) */}
+        <InGameMenu
+          isOpen={showInGameMenu}
+          onClose={() => setShowInGameMenu(false)}
+        />
       </main>
     </div>
   );

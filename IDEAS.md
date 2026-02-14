@@ -1,5 +1,104 @@
 # Game Enhancement Ideas
 
+## Core UI/UX Improvements
+
+### 1. Main Game Menu System
+
+A proper game menu interface that appears before/during gameplay, providing access to core game functions and settings.
+
+**Benefits**:
+- Professional game experience
+- Easy access to game management functions
+- Clear game state transitions
+- Settings management in one place
+
+**Complexity**: Low-Medium
+
+**MVP Features**:
+- **New Game**: Start fresh adventure with character/difficulty selection
+- **Load Game**: Browse and load saved games with preview (location, resources, play time)
+- **Settings**: Adjust game options (audio, graphics quality, controls)
+- **Continue**: Quick resume from last save (if exists)
+
+**Implementation Notes**:
+
+**Menu Structure**:
+```
+Main Menu (landing page after login)
+├── Continue (if save exists)
+├── New Game
+│   ├── Difficulty: Easy / Normal / Hard
+│   ├── Starting Location: Choose from 3-5 cities
+│   └── Character Name (optional)
+├── Load Game
+│   ├── Save Slot 1 (with preview)
+│   ├── Save Slot 2
+│   └── Save Slot 3
+└── Settings
+    ├── Audio (music volume, SFX volume, mute)
+    ├── Graphics (globe quality, effects, performance mode)
+    ├── Gameplay (tutorial hints, auto-save frequency)
+    └── Controls (keyboard shortcuts reference)
+```
+
+**In-Game Menu (ESC key or hamburger icon)**:
+- Resume
+- Save Game
+- Settings
+- Return to Main Menu (with confirmation)
+- Quit (with save prompt)
+
+**Files to Create**:
+- `src/app/menu/page.tsx` - Main menu page (replaces direct game entry)
+- `src/components/Menu/MainMenu.tsx` - Menu UI component
+- `src/components/Menu/NewGameModal.tsx` - New game configuration
+- `src/components/Menu/LoadGameModal.tsx` - Enhanced save browser
+- `src/components/Menu/SettingsModal.tsx` - Settings panel
+- `src/components/Menu/InGameMenu.tsx` - Pause/ESC menu overlay
+- `src/store/settingsStore.ts` - Zustand store for settings persistence
+
+**Settings to Include**:
+- **Audio**: Music volume (0-100%), SFX volume, mute all
+- **Graphics**: Globe texture quality (low/medium/high), particle effects on/off, shadow quality
+- **Gameplay**: Tutorial hints (on/off), auto-save frequency (every travel/every 5min/manual only), danger warnings
+- **Accessibility**: Text size, high contrast mode, colorblind mode
+- **Controls**: Keyboard shortcut reference, mouse sensitivity for globe rotation
+
+**Database Changes**:
+```sql
+-- Add settings to game_states or create separate user_settings table
+ALTER TABLE game_states ADD COLUMN difficulty TEXT DEFAULT 'normal';
+ALTER TABLE game_states ADD COLUMN character_name TEXT;
+
+CREATE TABLE user_settings (
+  user_id UUID PRIMARY KEY REFERENCES auth.users,
+  audio_music INT DEFAULT 70,
+  audio_sfx INT DEFAULT 80,
+  audio_muted BOOLEAN DEFAULT false,
+  graphics_quality TEXT DEFAULT 'medium',
+  auto_save_frequency TEXT DEFAULT 'every_travel',
+  tutorial_hints BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**User Flow**:
+1. User logs in → Redirected to Main Menu
+2. If save exists: "Continue" button prominent, else "New Game" highlighted
+3. Click "New Game" → Modal for difficulty/starting location
+4. Click "Load Game" → Grid view of save slots with preview cards
+5. Click "Settings" → Settings modal with tabs
+6. During game: Press ESC → In-game menu overlay
+
+**Visual Design**:
+- Background: Blurred/dimmed globe or stylized world map
+- Menu items: Large, clear buttons with icons
+- Save previews: Show location name, resources bar mini, timestamp, play time
+- Settings: Tabbed interface with immediate preview of changes
+
+---
+
 ## Travel System Improvements
 
 ### 1. Route Planning & Multi-Stop Journeys
@@ -431,6 +530,10 @@ Globe shows realistic day/night boundaries based on real-world time zones. Trave
 
 ## Priority Recommendations
 
+**Critical (MVP Completion)**:
+
+1. **Main Game Menu System** (essential UX, should have been Phase 10.5)
+
 **Quick Wins (Implement First)**:
 
 1. **Route Danger Levels & Encounters** (extends existing system)
@@ -458,6 +561,14 @@ Globe shows realistic day/night boundaries based on real-world time zones. Trave
 ---
 
 ## Implementation Roadmap Suggestion
+
+### Phase 10.5: Main Menu & Game Management (CRITICAL)
+
+- Main menu page (Continue, New Game, Load Game, Settings)
+- In-game pause menu (ESC overlay)
+- Settings system with persistence
+- New game configuration (difficulty, starting location)
+  **Estimated Time**: 6-8 hours
 
 ### Phase 11: Visual & UX Enhancements
 
