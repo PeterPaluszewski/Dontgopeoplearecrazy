@@ -127,19 +127,20 @@ describe('LoadGameModal', () => {
       expect(screen.getByText('normal')).toBeInTheDocument();
       expect(screen.getByText('hard')).toBeInTheDocument();
       
-      // Check for resource values
-      expect(screen.getByText('100')).toBeInTheDocument(); // food
-      expect(screen.getByText('50')).toBeInTheDocument(); // food from save 2
+      // Check for resource values (they appear with % symbol)
+      expect(screen.getByText('100%', { exact: false })).toBeInTheDocument();
+      expect(screen.getByText('50%', { exact: false })).toBeInTheDocument();
     });
   });
 
-  it('should show "No saves found" when there are no saves', async () => {
+  it('should show "No saved games found" when there are no saves', async () => {
     vi.mocked(saveLoad.loadAllSaves).mockResolvedValue({ success: true, saves: [] });
 
     render(<LoadGameModal isOpen={true} onClose={vi.fn()} />);
 
     await waitFor(() => {
-      expect(screen.getByText('No saves found')).toBeInTheDocument();
+      expect(screen.getByText('No saved games found')).toBeInTheDocument();
+      expect(screen.getByText('Close')).toBeInTheDocument();
     });
   });
 
@@ -157,7 +158,7 @@ describe('LoadGameModal', () => {
     });
   });
 
-  it('should load game and navigate when Load button is clicked', async () => {
+  it('should load game and navigate when save card is clicked', async () => {
     const user = userEvent.setup();
     const toast = await import('react-hot-toast');
 
@@ -167,8 +168,9 @@ describe('LoadGameModal', () => {
       expect(screen.getByText('Hero 1')).toBeInTheDocument();
     });
 
-    const loadButtons = screen.getAllByText('Load');
-    await user.click(loadButtons[0]);
+    // Click on the save card itself (it has cursor-pointer)
+    const saveCard = screen.getByText('Hero 1').closest('div.group');
+    await user.click(saveCard!);
 
     expect(mockLoadGameState).toHaveBeenCalledWith(mockSaves[0]);
     expect(toast.toast.success).toHaveBeenCalledWith('Game loaded!');
@@ -177,6 +179,7 @@ describe('LoadGameModal', () => {
 
   it('should show delete confirmation when Delete button is clicked', async () => {
     const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
 
     render(<LoadGameModal isOpen={true} onClose={vi.fn()} />);
 
@@ -187,14 +190,13 @@ describe('LoadGameModal', () => {
     const deleteButtons = screen.getAllByText('Delete');
     await user.click(deleteButtons[0]);
 
-    await waitFor(() => {
-      expect(screen.getByText('Are you sure?')).toBeInTheDocument();
-      expect(screen.getByText('Confirm Delete')).toBeInTheDocument();
-    });
+    expect(confirmSpy).toHaveBeenCalledWith('Are you sure you want to delete this save?');
+    confirmSpy.mockRestore();
   });
 
-  it('should cancel delete when Cancel is clicked', async () => {
+  it('should not delete save when confirmation is cancelled', async () => {
     const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
 
     render(<LoadGameModal isOpen={true} onClose={vi.fn()} />);
 
@@ -202,28 +204,18 @@ describe('LoadGameModal', () => {
       expect(screen.getByText('Hero 1')).toBeInTheDocument();
     });
 
-    // Click Delete
     const deleteButtons = screen.getAllByText('Delete');
     await user.click(deleteButtons[0]);
 
-    // Wait for confirmation UI
-    await waitFor(() => {
-      expect(screen.getByText('Are you sure?')).toBeInTheDocument();
-    });
-    
-    // Find and click the confirmation Cancel button (in the confirmation dialog)
-    const cancelButton = screen.getByText(/Cancel/);
-    await user.click(cancelButton);
-
-    // Confirmation should be hidden
-    await waitFor(() => {
-      expect(screen.queryByText('Confirm Delete')).not.toBeInTheDocument();
-    });
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(saveLoad.deleteSave).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
   });
 
-  it('should delete save when Confirm Delete is clicked', async () => {
+  it('should delete save when confirmation is accepted', async () => {
     const user = userEvent.setup();
     const toast = await import('react-hot-toast');
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     vi.mocked(saveLoad.deleteSave).mockResolvedValue({ success: true });
 
     render(<LoadGameModal isOpen={true} onClose={vi.fn()} />);
@@ -232,27 +224,21 @@ describe('LoadGameModal', () => {
       expect(screen.getByText('Hero 1')).toBeInTheDocument();
     });
 
-    // Click Delete
     const deleteButtons = screen.getAllByText('Delete');
     await user.click(deleteButtons[0]);
-
-    // Click Confirm Delete
-    await waitFor(() => {
-      expect(screen.getByText('Confirm Delete')).toBeInTheDocument();
-    });
-    
-    const confirmButton = screen.getByText('Confirm Delete');
-    await user.click(confirmButton);
 
     await waitFor(() => {
       expect(saveLoad.deleteSave).toHaveBeenCalledWith('save-1');
       expect(toast.toast.success).toHaveBeenCalledWith('Save deleted');
     });
+    
+    confirmSpy.mockRestore();
   });
 
   it('should show error when delete fails', async () => {
     const user = userEvent.setup();
     const toast = await import('react-hot-toast');
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     vi.mocked(saveLoad.deleteSave).mockResolvedValue({ 
       success: false, 
       error: 'Delete failed' 
@@ -264,51 +250,42 @@ describe('LoadGameModal', () => {
       expect(screen.getByText('Hero 1')).toBeInTheDocument();
     });
 
-    // Click Delete
     const deleteButtons = screen.getAllByText('Delete');
     await user.click(deleteButtons[0]);
 
-    // Click Confirm Delete
     await waitFor(() => {
-      expect(screen.getByText('Confirm Delete')).toBeInTheDocument();
+      expect(toast.toast.error).toHaveBeenCalledWith('Failed to delete save');
     });
     
-    const confirmButton = screen.getByText('Confirm Delete');
-    await user.click(confirmButton);
-
-    await waitFor(() => {
-      expect(toast.toast.error).toHaveBeenCalledWith('Delete failed');
-    });
+    confirmSpy.mockRestore();
   });
 
-  it('should refresh saves list after successful delete', async () => {
+  it('should remove save from list after successful delete', async () => {
     const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     vi.mocked(saveLoad.deleteSave).mockResolvedValue({ success: true });
 
     render(<LoadGameModal isOpen={true} onClose={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByText('Hero 1')).toBeInTheDocument();
+      expect(screen.getByText('Hero 2')).toBeInTheDocument();
     });
 
-    // Initial load
-    expect(saveLoad.loadAllSaves).toHaveBeenCalledTimes(1);
-
-    // Click Delete and confirm
     const deleteButtons = screen.getAllByText('Delete');
     await user.click(deleteButtons[0]);
 
-    const confirmButton = await screen.findByText('Confirm Delete');
-    await user.click(confirmButton);
-
     await waitFor(() => {
-      // Should call loadAllSaves again to refresh the list
-      expect(saveLoad.loadAllSaves).toHaveBeenCalledTimes(2);
+      expect(screen.queryByText('Hero 1')).not.toBeInTheDocument();
+      expect(screen.getByText('Hero 2')).toBeInTheDocument();
     });
+    
+    confirmSpy.mockRestore();
   });
 
-  it('should disable delete button while deleting', async () => {
+  it('should show deleting state while deleting', async () => {
     const user = userEvent.setup();
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     vi.mocked(saveLoad.deleteSave).mockImplementation(
       () => new Promise((resolve) => setTimeout(() => resolve({ success: true }), 100))
     );
@@ -319,18 +296,14 @@ describe('LoadGameModal', () => {
       expect(screen.getByText('Hero 1')).toBeInTheDocument();
     });
 
-    // Click Delete
     const deleteButtons = screen.getAllByText('Delete');
     await user.click(deleteButtons[0]);
 
-    // Click Confirm Delete
-    const confirmButton = await screen.findByText('Confirm Delete');
-    await user.click(confirmButton);
-
-    // Button should be disabled
     await waitFor(() => {
       expect(screen.getByText('Deleting...')).toBeInTheDocument();
     });
+    
+    confirmSpy.mockRestore();
   });
 
   it('should close modal when Cancel button is clicked', async () => {

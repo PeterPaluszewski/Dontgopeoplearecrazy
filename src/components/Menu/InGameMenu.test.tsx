@@ -1,5 +1,5 @@
 import * as saveLoad from '@/lib/save-load';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useRouter } from 'next/navigation';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -131,18 +131,6 @@ describe('InGameMenu', () => {
     expect(screen.getByText('Saving...')).toBeDisabled();
   });
 
-  it('should open LoadGameModal when Load Game is clicked', async () => {
-    const user = userEvent.setup();
-
-    render(<InGameMenu isOpen={true} onClose={vi.fn()} />);
-
-    const loadButton = screen.getByText('Load Game');
-    await user.click(loadButton);
-
-    // LoadGameModal should render
-    expect(screen.getByText('Load Game')).toBeInTheDocument();
-  });
-
   it('should open SettingsModal when Settings is clicked', async () => {
     const user = userEvent.setup();
 
@@ -151,53 +139,38 @@ describe('InGameMenu', () => {
     const settingsButton = screen.getByText('Settings');
     await user.click(settingsButton);
 
-    // SettingsModal should render
-    expect(screen.getByText('Settings')).toBeInTheDocument();
-  });
-
-  it('should sign out and navigate to menu when Main Menu is clicked', async () => {
-    const user = userEvent.setup();
-    const supabase = await import('@/lib/supabase');
-
-    render(<InGameMenu isOpen={true} onClose={vi.fn()} />);
-
-    const mainMenuButton = screen.getByText('Main Menu');
-    await user.click(mainMenuButton);
-
-    const client = supabase.createClient();
-    expect(client.auth.signOut).toHaveBeenCalled();
-    expect(mockRouter.push).toHaveBeenCalledWith('/menu');
-  });
-
-  it('should close menu when X button is clicked', async () => {
-    const user = userEvent.setup();
-    const onClose = vi.fn();
-
-    render(<InGameMenu isOpen={true} onClose={onClose} />);
-
-    const xButton = screen.getByText('×');
-    await user.click(xButton);
-
-    expect(onClose).toHaveBeenCalled();
-  });
-
-  it('should close LoadGameModal when it is closed', async () => {
-    const user = userEvent.setup();
-
-    render(<InGameMenu isOpen={true} onClose={vi.fn()} />);
-
-    // Open LoadGameModal
-    const loadButton = screen.getByText('Load Game');
-    await user.click(loadButton);
-
-    // The X button to close the modal
-    const xButtons = screen.getAllByText('×');
-    await user.click(xButtons[xButtons.length - 1]); // Click the last X (from LoadGameModal)
-
-    // LoadGameModal should be closed
+    // SettingsModal should render with audio tab by default
     await waitFor(() => {
-      expect(screen.queryByText('No saved games found')).not.toBeInTheDocument();
+      expect(screen.getByText(/Music Volume:/)).toBeInTheDocument();
     });
+  });
+
+  it('should show exit confirmation when Exit to Main Menu is clicked', async () => {
+    const user = userEvent.setup();
+
+    render(<InGameMenu isOpen={true} onClose={vi.fn()} />);
+
+    const exitButton = screen.getByText('Exit to Main Menu');
+    await user.click(exitButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Return to main menu/)).toBeInTheDocument();
+      expect(screen.getByText('Exit to Menu')).toBeInTheDocument();
+    });
+  });
+
+  it('should navigate to menu after confirming exit', async () => {
+    const user = userEvent.setup();
+
+    render(<InGameMenu isOpen={true} onClose={vi.fn()} />);
+
+    const exitButton = screen.getByText('Exit to Main Menu');
+    await user.click(exitButton);
+
+    const confirmButton = await screen.findByText('Exit to Menu');
+    await user.click(confirmButton);
+
+    expect(mockRouter.push).toHaveBeenCalledWith('/menu');
   });
 
   it('should close SettingsModal when it is closed', async () => {
@@ -209,33 +182,35 @@ describe('InGameMenu', () => {
     const settingsButton = screen.getByText('Settings');
     await user.click(settingsButton);
 
-    // Close SettingsModal using X button
-    const xButtons = screen.getAllByText('×');
-    await user.click(xButtons[xButtons.length - 1]); // Click the last X (from SettingsModal)
+    // Close SettingsModal using Done button
+    const doneButton = await screen.findByText('Done');
+    await user.click(doneButton);
 
     // SettingsModal should be closed
     await waitFor(() => {
-      expect(screen.queryByLabelText('Music')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Music Volume:/)).not.toBeInTheDocument();
     });
   });
 
-  it('should handle multiple modal openings', async () => {
+  it('should handle opening and closing settings multiple times', async () => {
     const user = userEvent.setup();
 
     render(<InGameMenu isOpen={true} onClose={vi.fn()} />);
 
     // Open Settings
     await user.click(screen.getByText('Settings'));
-    expect(screen.getByLabelText('Music')).toBeInTheDocument();
+    expect(await screen.findByText(/Music Volume:/)).toBeInTheDocument();
 
     // Close Settings
-    const closeButtons = screen.getAllByText('Close');
-    await user.click(closeButtons[closeButtons.length - 1]);
+    const doneButton = screen.getByText('Done');
+    await user.click(doneButton);
 
-    // Open Load Game
-    await user.click(screen.getByText('Load Game'));
-    
-    // Both modals shouldn't be open simultaneously
-    expect(screen.queryByLabelText('Music')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText(/Music Volume:/)).not.toBeInTheDocument();
+    });
+
+    // Open again
+    await user.click(screen.getByText('Settings'));
+    expect(await screen.findByText(/Music Volume:/)).toBeInTheDocument();
   });
 });

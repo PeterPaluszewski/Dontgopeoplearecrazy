@@ -10,16 +10,26 @@ vi.mock('@/store/settingsStore', () => ({
 }));
 
 describe('SettingsModal', () => {
-  const mockToggleMusic = vi.fn();
-  const mockToggleSound = vi.fn();
+  const mockUpdateSettings = vi.fn();
+  const mockResetToDefaults = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
     (useSettingsStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      isMusicEnabled: true,
-      isSoundEnabled: true,
-      toggleMusic: mockToggleMusic,
-      toggleSound: mockToggleSound,
+      audioMusic: 70,
+      audioSFX: 80,
+      audioMuted: false,
+      graphicsQuality: 'medium',
+      particleEffects: true,
+      shadows: true,
+      autoSaveFrequency: 'every_travel',
+      tutorialHints: true,
+      dangerWarnings: true,
+      textSize: 'medium',
+      highContrast: false,
+      colorblindMode: false,
+      updateSettings: mockUpdateSettings,
+      resetToDefaults: mockResetToDefaults,
     });
   });
 
@@ -34,88 +44,97 @@ describe('SettingsModal', () => {
     expect(screen.getByText('Settings')).toBeInTheDocument();
   });
 
-  it('should display music toggle', () => {
+  it('should render all tabs', () => {
     render(<SettingsModal isOpen={true} onClose={vi.fn()} />);
     
-    expect(screen.getByText('Music')).toBeInTheDocument();
+    expect(screen.getByText('audio')).toBeInTheDocument();
+    expect(screen.getByText('graphics')).toBeInTheDocument();
+    expect(screen.getByText('gameplay')).toBeInTheDocument();
+    expect(screen.getByText('accessibility')).toBeInTheDocument();
   });
 
-  it('should display sound toggle', () => {
+  it('should show audio tab by default', () => {
     render(<SettingsModal isOpen={true} onClose={vi.fn()} />);
     
-    expect(screen.getByText('Sound Effects')).toBeInTheDocument();
+    expect(screen.getByText('Music Volume: 70%')).toBeInTheDocument();
+    expect(screen.getByText('Sound Effects Volume: 80%')).toBeInTheDocument();
   });
 
-  it('should show music as enabled when music is on', () => {
-    render(<SettingsModal isOpen={true} onClose={vi.fn()} />);
-    
-    const musicToggle = screen.getByLabelText('Music');
-    expect(musicToggle).toBeChecked();
-  });
-
-  it('should show music as disabled when music is off', () => {
-    (useSettingsStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      isMusicEnabled: false,
-      isSoundEnabled: true,
-      toggleMusic: mockToggleMusic,
-      toggleSound: mockToggleSound,
-    });
-
-    render(<SettingsModal isOpen={true} onClose={vi.fn()} />);
-    
-    const musicToggle = screen.getByLabelText('Music');
-    expect(musicToggle).not.toBeChecked();
-  });
-
-  it('should toggle music when music toggle is clicked', async () => {
+  it('should switch to graphics tab when clicked', async () => {
     const user = userEvent.setup();
     render(<SettingsModal isOpen={true} onClose={vi.fn()} />);
     
-    const musicToggle = screen.getByLabelText('Music');
-    await user.click(musicToggle);
+    const graphicsTab = screen.getByText('graphics');
+    await user.click(graphicsTab);
 
-    expect(mockToggleMusic).toHaveBeenCalled();
+    expect(screen.getByText('Graphics Quality')).toBeInTheDocument();
+    expect(screen.getByLabelText('Enable Particle Effects')).toBeInTheDocument();
   });
 
-  it('should show sound as enabled when sound is on', () => {
-    render(<SettingsModal isOpen={true} onClose={vi.fn()} />);
-    
-    const soundToggle = screen.getByLabelText('Sound Effects');
-    expect(soundToggle).toBeChecked();
-  });
-
-  it('should show sound as disabled when sound is off', () => {
-    (useSettingsStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      isMusicEnabled: true,
-      isSoundEnabled: false,
-      toggleMusic: mockToggleMusic,
-      toggleSound: mockToggleSound,
-    });
-
-    render(<SettingsModal isOpen={true} onClose={vi.fn()} />);
-    
-    const soundToggle = screen.getByLabelText('Sound Effects');
-    expect(soundToggle).not.toBeChecked();
-  });
-
-  it('should toggle sound when sound toggle is clicked', async () => {
+  it('should switch to gameplay tab when clicked', async () => {
     const user = userEvent.setup();
     render(<SettingsModal isOpen={true} onClose={vi.fn()} />);
     
-    const soundToggle = screen.getByLabelText('Sound Effects');
-    await user.click(soundToggle);
+    const gameplayTab = screen.getByText('gameplay');
+    await user.click(gameplayTab);
 
-    expect(mockToggleSound).toHaveBeenCalled();
+    expect(screen.getByText('Auto-Save Frequency')).toBeInTheDocument();
+    expect(screen.getByLabelText('Show Tutorial Hints')).toBeInTheDocument();
   });
 
-  it('should close modal when Close button is clicked', async () => {
+  it('should switch to accessibility tab when clicked', async () => {
+    const user = userEvent.setup();
+    render(<SettingsModal isOpen={true} onClose={vi.fn()} />);
+    
+    const accessibilityTab = screen.getByText('accessibility');
+    await user.click(accessibilityTab);
+
+    expect(screen.getByText('Text Size')).toBeInTheDocument();
+    expect(screen.getByLabelText('High Contrast Mode')).toBeInTheDocument();
+  });
+
+  it('should update music volume when slider is changed', async () => {
+    const user = userEvent.setup();
+    render(<SettingsModal isOpen={true} onClose={vi.fn()} />);
+    
+    // Find the music volume slider (first range input in audio tab)
+    const sliders = screen.getAllByRole('slider');
+    const musicSlider = sliders[0]; // First slider is music volume
+    
+    await user.click(musicSlider);
+    
+    // Slider interactions call updateSettings
+    expect(mockUpdateSettings).toHaveBeenCalled();
+  });
+
+  it('should toggle mute all audio when checkbox is clicked', async () => {
+    const user = userEvent.setup();
+    render(<SettingsModal isOpen={true} onClose={vi.fn()} />);
+    
+    const muteCheckbox = screen.getByLabelText('Mute All Audio');
+    await user.click(muteCheckbox);
+
+    expect(mockUpdateSettings).toHaveBeenCalledWith({ audioMuted: true });
+  });
+
+  it('should call resetToDefaults when Reset button is clicked', async () => {
+    const user = userEvent.setup();
+    render(<SettingsModal isOpen={true} onClose={vi.fn()} />);
+
+    const resetButton = screen.getByText('Reset to Defaults');
+    await user.click(resetButton);
+
+    expect(mockResetToDefaults).toHaveBeenCalled();
+  });
+
+  it('should close modal when Done button is clicked', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
 
     render(<SettingsModal isOpen={true} onClose={onClose} />);
 
-    const closeButton = screen.getByText('Close');
-    await user.click(closeButton);
+    const doneButton = screen.getByText('Done');
+    await user.click(doneButton);
 
     expect(onClose).toHaveBeenCalled();
   });
@@ -130,37 +149,5 @@ describe('SettingsModal', () => {
     await user.click(xButton);
 
     expect(onClose).toHaveBeenCalled();
-  });
-
-  it('should handle both settings being off', () => {
-    (useSettingsStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
-      isMusicEnabled: false,
-      isSoundEnabled: false,
-      toggleMusic: mockToggleMusic,
-      toggleSound: mockToggleSound,
-    });
-
-    render(<SettingsModal isOpen={true} onClose={vi.fn()} />);
-    
-    const musicToggle = screen.getByLabelText('Music');
-    const soundToggle = screen.getByLabelText('Sound Effects');
-    
-    expect(musicToggle).not.toBeChecked();
-    expect(soundToggle).not.toBeChecked();
-  });
-
-  it('should allow multiple toggle interactions', async () => {
-    const user = userEvent.setup();
-    render(<SettingsModal isOpen={true} onClose={vi.fn()} />);
-    
-    const musicToggle = screen.getByLabelText('Music');
-    const soundToggle = screen.getByLabelText('Sound Effects');
-
-    await user.click(musicToggle);
-    await user.click(soundToggle);
-    await user.click(musicToggle);
-
-    expect(mockToggleMusic).toHaveBeenCalledTimes(2);
-    expect(mockToggleSound).toHaveBeenCalledTimes(1);
   });
 });
