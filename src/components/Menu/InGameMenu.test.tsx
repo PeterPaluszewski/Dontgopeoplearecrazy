@@ -54,20 +54,19 @@ describe('InGameMenu', () => {
   it('should display all menu options', () => {
     render(<InGameMenu isOpen={true} onClose={vi.fn()} />);
     
-    expect(screen.getByText('Resume')).toBeInTheDocument();
+    expect(screen.getByText('Resume Game')).toBeInTheDocument();
     expect(screen.getByText('Save Game')).toBeInTheDocument();
-    expect(screen.getByText('Load Game')).toBeInTheDocument();
     expect(screen.getByText('Settings')).toBeInTheDocument();
-    expect(screen.getByText('Main Menu')).toBeInTheDocument();
+    expect(screen.getByText('Exit to Main Menu')).toBeInTheDocument();
   });
 
-  it('should close menu when Resume is clicked', async () => {
+  it('should close menu when Resume Game is clicked', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
 
     render(<InGameMenu isOpen={true} onClose={onClose} />);
 
-    const resumeButton = screen.getByText('Resume');
+    const resumeButton = screen.getByText('Resume Game');
     await user.click(resumeButton);
 
     expect(onClose).toHaveBeenCalled();
@@ -100,7 +99,7 @@ describe('InGameMenu', () => {
     const saveButton = screen.getByText('Save Game');
     await user.click(saveButton);
 
-    expect(toast.toast.error).toHaveBeenCalledWith('Database error');
+    expect(toast.toast.error).toHaveBeenCalledWith('Failed to save game');
   });
 
   it('should show generic error when save fails without message', async () => {

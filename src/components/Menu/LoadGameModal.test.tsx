@@ -127,9 +127,11 @@ describe('LoadGameModal', () => {
       expect(screen.getByText('normal')).toBeInTheDocument();
       expect(screen.getByText('hard')).toBeInTheDocument();
       
-      // Check for resource values (they appear with % symbol)
-      expect(screen.getByText('100%', { exact: false })).toBeInTheDocument();
-      expect(screen.getByText('50%', { exact: false })).toBeInTheDocument();
+      // Check for resource values (they appear multiple times with %)
+      const percentValues = screen.getAllByText(/100%/);
+      expect(percentValues.length).toBeGreaterThan(0);
+      
+      expect(screen.getByText(/50%/)).toBeInTheDocument();
     });
   });
 

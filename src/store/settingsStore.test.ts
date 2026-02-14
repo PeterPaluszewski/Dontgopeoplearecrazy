@@ -3,89 +3,82 @@ import { useSettingsStore } from './settingsStore';
 
 describe('settingsStore', () => {
   beforeEach(() => {
-    // Reset store state before each test
-    const store = useSettingsStore.getState();
-    store.isMusicEnabled = true;
-    store.isSoundEnabled = true;
+    // Reset store to defaults before each test
+    useSettingsStore.getState().resetToDefaults();
   });
 
-  it('should have music enabled by default', () => {
-    const { isMusicEnabled } = useSettingsStore.getState();
-    expect(isMusicEnabled).toBe(true);
+  it('should have default music volume of 70', () => {
+    const { audioMusic } = useSettingsStore.getState();
+    expect(audioMusic).toBe(70);
   });
 
-  it('should have sound enabled by default', () => {
-    const { isSoundEnabled } = useSettingsStore.getState();
-    expect(isSoundEnabled).toBe(true);
+  it('should have default sound volume of 80', () => {
+    const { audioSFX } = useSettingsStore.getState();
+    expect(audioSFX).toBe(80);
   });
 
-  it('should toggle music off', () => {
-    const { toggleMusic } = useSettingsStore.getState();
+  it('should update music volume', () => {
+    const { updateSettings } = useSettingsStore.getState();
     
-    toggleMusic();
+    updateSettings({ audioMusic: 50 });
     
-    const { isMusicEnabled } = useSettingsStore.getState();
-    expect(isMusicEnabled).toBe(false);
+    const { audioMusic } = useSettingsStore.getState();
+    expect(audioMusic).toBe(50);
   });
 
-  it('should toggle music on', () => {
-    const { toggleMusic } = useSettingsStore.getState();
+  it('should update sound volume', () => {
+    const { updateSettings } = useSettingsStore.getState();
     
-    // Toggle off
-    toggleMusic();
-    // Toggle on
-    toggleMusic();
+    updateSettings({ audioSFX: 30 });
     
-    const { isMusicEnabled } = useSettingsStore.getState();
-    expect(isMusicEnabled).toBe(true);
+    const { audioSFX } = useSettingsStore.getState();
+    expect(audioSFX).toBe(30);
   });
 
-  it('should toggle sound off', () => {
-    const { toggleSound } = useSettingsStore.getState();
+  it('should mute audio', () => {
+    const { updateSettings } = useSettingsStore.getState();
     
-    toggleSound();
+    updateSettings({ audioMuted: true });
     
-    const { isSoundEnabled } = useSettingsStore.getState();
-    expect(isSoundEnabled).toBe(false);
+    const { audioMuted } = useSettingsStore.getState();
+    expect(audioMuted).toBe(true);
   });
 
-  it('should toggle sound on', () => {
-    const { toggleSound } = useSettingsStore.getState();
+  it('should unmute audio', () => {
+    const { updateSettings } = useSettingsStore.getState();
     
-    // Toggle off
-    toggleSound();
-    // Toggle on
-    toggleSound();
+    updateSettings({ audioMuted: true });
+    updateSettings({ audioMuted: false });
     
-    const { isSoundEnabled } = useSettingsStore.getState();
-    expect(isSoundEnabled).toBe(true);
+    const { audioMuted } = useSettingsStore.getState();
+    expect(audioMuted).toBe(false);
   });
 
-  it('should toggle music and sound independently', () => {
-    const { toggleMusic, toggleSound } = useSettingsStore.getState();
+  it('should update music and sound independently', () => {
+    const { updateSettings } = useSettingsStore.getState();
     
-    toggleMusic();
+    updateSettings({ audioMusic: 20 });
     
     let state = useSettingsStore.getState();
-    expect(state.isMusicEnabled).toBe(false);
-    expect(state.isSoundEnabled).toBe(true);
+    expect(state.audioMusic).toBe(20);
+    expect(state.audioSFX).toBe(80); // unchanged
     
-    toggleSound();
+    updateSettings({ audioSFX: 40 });
     
     state = useSettingsStore.getState();
-    expect(state.isMusicEnabled).toBe(false);
-    expect(state.isSoundEnabled).toBe(false);
+    expect(state.audioMusic).toBe(20); // unchanged
+    expect(state.audioSFX).toBe(40);
   });
 
-  it('should allow multiple toggles', () => {
-    const { toggleMusic } = useSettingsStore.getState();
+  it('should reset to defaults', () => {
+    const { updateSettings, resetToDefaults } = useSettingsStore.getState();
     
-    toggleMusic(); // off
-    toggleMusic(); // on
-    toggleMusic(); // off
-    toggleMusic(); // on
+    updateSettings({ audioMusic: 10, audioSFX: 10, audioMuted: true });
+    resetToDefaults();
     
-    const { isMusicEnabled } = useSettingsStore.getState();
-    expect(isMusicEnabled).toBe(true);
+    const state = useSettingsStore.getState();
+    expect(state.audioMusic).toBe(70);
+    expect(state.audioSFX).toBe(80);
+    expect(state.audioMuted).toBe(false);
   });
 });

@@ -1,5 +1,5 @@
 import { useSettingsStore } from '@/store/settingsStore';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SettingsModal from './SettingsModal';
@@ -93,18 +93,18 @@ describe('SettingsModal', () => {
     expect(screen.getByLabelText('High Contrast Mode')).toBeInTheDocument();
   });
 
-  it('should update music volume when slider is changed', async () => {
-    const user = userEvent.setup();
+  it('should update music volume when slider is changed', () => {
     render(<SettingsModal isOpen={true} onClose={vi.fn()} />);
     
     // Find the music volume slider (first range input in audio tab)
     const sliders = screen.getAllByRole('slider');
     const musicSlider = sliders[0]; // First slider is music volume
     
-    await user.click(musicSlider);
+    // Simulate changing the slider value
+    fireEvent.change(musicSlider, { target: { value: '50' } });
     
-    // Slider interactions call updateSettings
-    expect(mockUpdateSettings).toHaveBeenCalled();
+    // updateSettings should be called with the new value
+    expect(mockUpdateSettings).toHaveBeenCalledWith({ audioMusic: 50 });
   });
 
   it('should toggle mute all audio when checkbox is clicked', async () => {
