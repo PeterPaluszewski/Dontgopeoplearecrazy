@@ -1,3 +1,4 @@
+import * as saveLoadLib from '@/lib/save-load';
 import { TravelCost } from '@/lib/travel-utils';
 import { GameState, InventoryItem, Item } from '@/types/game';
 import { create } from 'zustand';
@@ -11,6 +12,8 @@ interface GameStore extends Omit<GameState, 'userId' | 'createdAt' | 'updatedAt'
   travelToLocation: (locationId: string, cost: TravelCost) => void;
   resetGame: () => void;
   loadGame: (gameState: GameState) => void;
+  saveGame: () => Promise<{ success: boolean; error?: string }>;
+  loadGameFromDB: () => Promise<{ success: boolean; error?: string }>;
 }
 
 const initialState = {
@@ -104,4 +107,44 @@ export const useGameStore = create<GameStore>((set) => ({
       visitedLocationIds: gameState.visitedLocationIds,
       isActive: gameState.isActive,
     }),
+
+  saveGame: async () => {
+    const state = useGameStore.getState();
+    const result = await saveLoadLib.saveGame({
+      id: state.id || undefined,
+      currentLocationId: state.currentLocationId,
+      food: state.food,
+      water: state.water,
+      energy: state.energy,
+      inventory: state.inventory,
+      visitedLocationIds: state.visitedLocationIds,
+      isActive: state.isActive,
+    });
+
+    // Update the ID if it was a new save
+    if (result.success && result.gameStateId && !state.id) {
+      set({ id: result.gameStateId });
+    }
+
+    return result;
+  },
+
+  loadGameFromDB: async () => {
+    const result = await saveLoadLib.loadGame();
+
+    if (result.success && result.gameState) {
+      set({
+        id: result.gameState.id,
+        currentLocationId: result.gameState.currentLocationId,
+        food: result.gameState.food,
+        water: result.gameState.water,
+        energy: result.gameState.energy,
+        inventory: result.gameState.inventory,
+        visitedLocationIds: result.gameState.visitedLocationIds,
+        isActive: result.gameState.isActive,
+      });
+    }
+
+    return result;
+  },
 }));

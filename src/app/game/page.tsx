@@ -4,6 +4,7 @@ import EventModal from '@/components/EventModal/EventModal';
 import InventoryPanel from '@/components/InventoryPanel/InventoryPanel';
 import LocationInfo from '@/components/LocationInfo/LocationInfo';
 import ResourcePanel from '@/components/ResourcePanel/ResourcePanel';
+import SaveLoadPanel from '@/components/SaveLoadPanel/SaveLoadPanel';
 import TravelModal from '@/components/TravelModal/TravelModal';
 import { getAllLocations } from '@/lib/database';
 import { GameEvent, triggerRandomEvent } from '@/lib/events';
@@ -36,7 +37,14 @@ export default function GamePage() {
   const [currentEvent, setCurrentEvent] = useState<GameEvent | null>(null);
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const router = useRouter();
-  const { currentLocationId, visitedLocationIds, visitLocation, travelToLocation } = useGameStore();
+  const {
+    currentLocationId,
+    visitedLocationIds,
+    visitLocation,
+    travelToLocation,
+    loadGameFromDB,
+    saveGame,
+  } = useGameStore();
 
   useEffect(() => {
     const checkUser = async () => {
@@ -51,6 +59,9 @@ export default function GamePage() {
       }
 
       setUser(user);
+
+      // Try to load saved game
+      const loadResult = await loadGameFromDB();
 
       // Load locations
       const locs = await getAllLocations();
@@ -70,7 +81,7 @@ export default function GamePage() {
     };
 
     checkUser();
-  }, [router, currentLocationId, visitLocation]);
+  }, [router, currentLocationId, visitLocation, loadGameFromDB]);
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -98,6 +109,9 @@ export default function GamePage() {
     travelToLocation(travelDestination.id, cost);
     setSelectedLocation(travelDestination);
     setTravelDestination(null);
+
+    // Auto-save after travel
+    await saveGame();
 
     // Trigger random event (30% chance)
     const event = await triggerRandomEvent(0.3);
@@ -140,6 +154,7 @@ export default function GamePage() {
         <div className="absolute top-4 left-4 w-80 z-10 space-y-4">
           <ResourcePanel />
           <InventoryPanel />
+          <SaveLoadPanel />
         </div>
 
         {/* Right Panel - Location Info */}
