@@ -2,16 +2,20 @@
 
 A survival-based backpacking game built as a web application using Next.js, Supabase, and Three.js. Travel across Europe, manage your resources, and survive random events as you explore 10 major cities.
 
+## 🚀 Live Demo
+
+**Deployed:** https://dontgopeoplearecrazy.vercel.app
+
 ## 🎮 Current Status
 
-**Phase 8 Complete** - Fully functional travel system with random events!
+**Phase 9 Complete** - Save/Load system with production deployment!
 
 ### ✅ Completed Features
 
 - **Phase 1-2**: Project setup with comprehensive tooling
   - Next.js 14 with TypeScript, Tailwind CSS
   - ESLint, Prettier, Husky pre-commit hooks
-  - Vitest testing framework (125 tests passing)
+  - Vitest testing framework (148 tests passing)
 - **Phase 3**: Database & Authentication
   - Supabase PostgreSQL with Row Level Security
   - 10 European cities with connections and difficulty ratings
@@ -34,16 +38,23 @@ A survival-based backpacking game built as a web application using Next.js, Supa
   - Resource cost calculation (difficulty-based)
   - Random events (30% chance during travel)
   - Event modal with resource effects
+- **Phase 9**: Save/Load System ✅
+  - Game state persisted to Supabase
+  - Auto-load on page load
+  - Auto-save after travel
+  - Manual save/load buttons with feedback
+  - Multiple save slots per user
+- **Phase 10**: Production Deployment ✅
+  - Deployed to Vercel
+  - CI/CD with automatic deployments
+  - Environment variables configured
 
-### 🚧 In Progress / Next Steps
+### 🚧 Future Enhancements
 
-- **Phase 9**: Save/Load System
-  - Connect game state to Supabase
-  - Auto-save on location change
-  - Manual save/load with multiple slots
-- **Future Enhancements**:
-  - Crafting system
-  - Quest/achievement system
+- Crafting system
+- Quest/achievement system
+- More locations worldwide
+- Multiplayer features
   - Multiplayer features
   - Mobile optimization
 

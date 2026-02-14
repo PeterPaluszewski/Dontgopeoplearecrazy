@@ -1,35 +1,65 @@
 # Deployment Guide
 
+## ✅ Deployed Successfully!
+
+**Live Site:** https://dontgopeoplearecrazy.vercel.app
+
+This app has been successfully deployed to Vercel using both:
+
+- ✅ Vercel CLI (manual deployment)
+- ✅ GitHub integration (automatic deployments)
+
+---
+
+## Deployment Methods
+
+### Method 1: Vercel CLI (Recommended for First Deploy)
+
+```bash
+# Install Vercel CLI globally
+npm install -g vercel
+
+# Login to Vercel
+vercel login
+
+# Deploy to production
+vercel --prod
+```
+
+**Advantages:**
+
+- Bypasses GitHub integration issues
+- Works with private repositories on free tier
+- Faster for quick deployments
+
+### Method 2: GitHub Integration (Automatic Deployments)
+
+Once initially deployed with CLI, automatic deployments work when:
+
+1. Code is pushed to the `develop` branch
+2. Vercel automatically builds and deploys
+3. Preview deployments for other branches
+
+**Note:** For private repositories on Hobby tier, you may need to:
+
+- Make repository public, OR
+- Deploy via CLI, OR
+- Upgrade to Vercel Pro
+
+---
+
 ## Prerequisites
 
 - GitHub account with repository: `PeterPaluszewski/Dontgopeoplearecrazy`
 - Vercel account (sign up at https://vercel.com)
 - Supabase project with production database
 
-## Step 1: Push Code to GitHub
+## Environment Variables Setup
 
-```bash
-git push -u origin save-load
-```
+### In Vercel Dashboard:
 
-Or merge to your main deployment branch (develop/main) and push:
-
-```bash
-git checkout develop
-git merge save-load
-git push origin develop
-```
-
-## Step 2: Connect to Vercel
-
-1. Go to https://vercel.com
-2. Click "Add New..." → "Project"
-3. Import your GitHub repository: `PeterPaluszewski/Dontgopeoplearecrazy`
-4. Vercel will auto-detect Next.js configuration
-
-## Step 3: Configure Environment Variables
-
-In Vercel project settings, add these environment variables:
+1. Go to your project → Settings → Environment Variables
+2. Add these variables for Production, Preview, and Development:
 
 ### Required Variables:
 
@@ -49,72 +79,86 @@ In Vercel project settings, add these environment variables:
 4. Copy "Project URL" → Use for `NEXT_PUBLIC_SUPABASE_URL`
 5. Copy "anon public" key → Use for `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-## Step 4: Configure Supabase for Production
+## Supabase Configuration for Production
 
-### Update Authentication Redirect URLs:
+### ✅ Update Authentication Redirect URLs:
 
 1. In Supabase dashboard, go to Authentication → URL Configuration
-2. Add your Vercel deployment URL to "Site URL" and "Redirect URLs":
-   - `https://your-app-name.vercel.app`
-   - `https://your-app-name.vercel.app/auth/callback`
-   - `https://your-app-name.vercel.app/**` (wildcard)
+2. Set **Site URL** to: `https://dontgopeoplearecrazy.vercel.app`
+3. Add **Redirect URLs**:
+   - `https://dontgopeoplearecrazy.vercel.app/**`
+   - `https://dontgopeoplearecrazy.vercel.app/auth/callback`
+   - `http://localhost:3000/**` (for local development)
 
-### Enable RLS Policies:
+### Email Verification Setup:
 
-Ensure all tables have RLS enabled and proper policies:
+For production emails to work:
+
+1. Go to Authentication → Email Templates
+2. Verify the confirmation email uses your Vercel domain
+3. **Optional:** Disable email confirmation in Auth settings for testing
+
+### Database Tables (Already Configured):
 
 ```sql
--- Already configured in your database:
 -- ✓ locations (public read access)
 -- ✓ items (public read access)
 -- ✓ game_events (public read access)
--- ✓ game_states (user-specific access)
+-- ✓ game_states (user-specific access with RLS)
 ```
 
-## Step 5: Deploy
+---
 
-1. Click "Deploy" in Vercel
-2. Vercel will:
-   - Install dependencies (`npm install`)
-   - Run type checking
-   - Build the Next.js app (`npm run build`)
-   - Deploy to production
+## Verification Checklist
 
-Build time: ~2-3 minutes
+After deployment:
 
-## Step 6: Verify Deployment
+- ✅ Site accessible at production URL
+- ✅ Authentication (register/login) works
+- ✅ Globe visualization renders correctly
+- ✅ Location markers visible and clickable
+- ✅ Travel system functional (cost calculation, events)
+- ✅ Save/load system persists game state
+- ✅ All 148 tests passing in production build
+- ✅ No console errors on page load
 
-After deployment completes:
-
-1. Visit your Vercel URL (e.g., `https://your-app-name.vercel.app`)
-2. Test authentication:
-   - Register a new account
-   - Login with existing account
-3. Test game functionality:
-   - Load game page
-   - View globe with locations
-   - Travel between cities
-   - Save/load game state
-4. Check browser console for errors
-
-## Step 7: Custom Domain (Optional)
-
-1. In Vercel project settings, go to "Domains"
-2. Add your custom domain
-3. Update DNS records as instructed by Vercel
-4. Add custom domain to Supabase redirect URLs
+---
 
 ## Troubleshooting
+
+### Private Repository Deployment Issue
+
+**Problem**: "You cannot deploy to a Hobby team from a private repository"
+
+**Solution**: Use Vercel CLI instead of GitHub integration:
+
+```bash
+npm install -g vercel
+vercel login
+vercel --prod
+```
+
+### Secret Reference Errors
+
+**Problem**: "Environment Variable references Secret which does not exist"
+
+**Solution**: Set environment variables directly in Vercel dashboard, not as secret references in vercel.json:
+
+- Go to Project Settings → Environment Variables
+- Add variables without `@` prefix
+- Redeploy
 
 ### Authentication Not Working
 
 - Check Supabase redirect URLs include your Vercel domain
-- Verify environment variables are set correctly
+- Verify environment variables are set correctly in Vercel
 - Check browser console for errors
 
 ### Database Connection Errors
 
 - Verify Supabase URL and anon key are correct
+- Check RLS policies allow authenticated access
+- Ensure game_states table exists with correct schema
 - Check RLS policies allow public read access for locations/items
 - Ensure game_states table exists with proper schema
 
