@@ -1,188 +1,314 @@
-# Backpacking Game - Unity Setup Guide
+# Backpacking Game - Setup Guide
 
-## Initial Setup (Week 1 - Days 1-2)
+This guide will help you set up the full development environment for the backpacking game.
 
-### Step 1: Create Unity Project
+## 1. Supabase Setup
 
-1. Open Unity Hub
-2. Create **New Project**
-3. Select **3D (URP)** or **3D Core** template
-4. Name: `Dontgopeoplearecrazy`
-5. Location: `c:\Users\peter\code\Dontgopeoplearecrazy`
-6. Click **Create Project**
+### Create a Supabase Project
 
-### Step 2: Copy Project Files
+1. Go to [https://supabase.com](https://supabase.com) and sign up/login
+2. Click "New Project"
+3. Fill in project details:
+   - **Name**: backpacking-game (or your preferred name)
+   - **Database Password**: Save this securely
+   - **Region**: Choose closest to you
+   - **Pricing Plan**: Free tier is fine for development
 
-The folder structure and core scripts have been created in the `Assets/_Project` directory:
+### Get API Credentials
 
+1. Go to Project Settings → API
+2. Copy these values to your `.env.local` file:
+   - **Project URL** → `NEXT_PUBLIC_SUPABASE_URL`
+   - **Publishable key** (sb*publishable*...) → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - Note: Use the new "publishable key", not the legacy "anon" key
+
+### Database Schema
+
+Run this SQL in the Supabase SQL Editor (Database → SQL Editor):
+
+```sql
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Locations table
+CREATE TABLE locations (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  description TEXT,
+  latitude REAL NOT NULL,
+  longitude REAL NOT NULL,
+  difficulty_multiplier REAL DEFAULT 1.0,
+  travel_days INTEGER DEFAULT 1,
+  connected_location_ids UUID[] DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Items table
+CREATE TABLE items (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  description TEXT,
+  weight REAL DEFAULT 0,
+  food_value REAL DEFAULT 0,
+  water_value REAL DEFAULT 0,
+  energy_value REAL DEFAULT 0,
+  item_type TEXT CHECK (item_type IN ('FOOD', 'WATER', 'EQUIPMENT', 'CONSUMABLE')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Game states table
+CREATE TABLE game_states (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  current_location_id UUID REFERENCES locations(id),
+  food REAL DEFAULT 100,
+  water REAL DEFAULT 100,
+  energy REAL DEFAULT 100,
+  inventory JSONB DEFAULT '[]',
+  visited_location_ids UUID[] DEFAULT '{}',
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Game events table
+CREATE TABLE game_events (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  title TEXT NOT NULL,
+  description TEXT,
+  event_type TEXT CHECK (event_type IN ('RANDOM', 'LOCATION_BASED', 'RESOURCE_BASED')),
+  food_effect REAL DEFAULT 0,
+  water_effect REAL DEFAULT 0,
+  energy_effect REAL DEFAULT 0,
+  choices JSONB DEFAULT '[]',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable Row Level Security
+ALTER TABLE locations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE game_states ENABLE ROW LEVEL SECURITY;
+ALTER TABLE game_events ENABLE ROW LEVEL SECURITY;
+
+-- Policies for locations (public read)
+CREATE POLICY "Locations are viewable by everyone"
+  ON locations FOR SELECT
+  USING (true);
+
+-- Policies for items (public read)
+CREATE POLICY "Items are viewable by everyone"
+  ON items FOR SELECT
+  USING (true);
+
+-- Policies for game_states (user-specific)
+CREATE POLICY "Users can view their own game states"
+  ON game_states FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own game states"
+  ON game_states FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own game states"
+  ON game_states FOR UPDATE
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own game states"
+  ON game_states FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- Policies for game_events (public read)
+CREATE POLICY "Events are viewable by everyone"
+  ON game_events FOR SELECT
+  USING (true);
+
+-- Function to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger for game_states updated_at
+CREATE TRIGGER update_game_states_updated_at
+  BEFORE UPDATE ON game_states
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
 ```
-Assets/_Project/
-├── Scripts/
-│   ├── Core/              ✓ GameManager, SaveManager
-│   ├── Data/              ✓ ItemData, LocationData, EventData
-│   ├── Gameplay/
-│   │   ├── Inventory/     ✓ InventoryManager
-│   │   ├── Resources/     ✓ ResourceManager
-│   │   ├── Travel/        ✓ LocationNode
-│   │   └── Events/        (TODO)
-│   ├── UI/                (TODO)
-│   └── Utilities/         ✓ GlobeHelper
-├── Scenes/
-├── Prefabs/
-├── ScriptableObjects/
-└── Art/
+
+### Seed Initial Data (Optional)
+
+Add some starting locations and items:
+
+```sql
+-- Insert starting locations
+INSERT INTO locations (name, description, latitude, longitude, difficulty_multiplier, travel_days) VALUES
+  ('Paris', 'The City of Light, a perfect starting point for your backpacking adventure.', 48.8566, 2.3522, 1.0, 0),
+  ('Barcelona', 'Mediterranean paradise with stunning architecture.', 41.3851, 2.1734, 1.2, 2),
+  ('Berlin', 'Historic city with vibrant culture and nightlife.', 52.5200, 13.4050, 1.1, 3),
+  ('Rome', 'Ancient ruins meet modern Italian charm.', 41.9028, 12.4964, 1.3, 2),
+  ('Amsterdam', 'Canals, bicycles, and historic charm.', 52.3676, 4.9041, 1.0, 1);
+
+-- Connect locations (example: Paris connects to Barcelona, Berlin, Amsterdam)
+UPDATE locations SET connected_location_ids = ARRAY[
+  (SELECT id FROM locations WHERE name = 'Barcelona'),
+  (SELECT id FROM locations WHERE name = 'Berlin'),
+  (SELECT id FROM locations WHERE name = 'Amsterdam')
+] WHERE name = 'Paris';
+
+-- Insert basic items
+INSERT INTO items (name, description, weight, food_value, item_type) VALUES
+  ('Granola Bar', 'Quick energy boost', 0.1, 10, 'FOOD'),
+  ('Trail Mix', 'Nutritious snack', 0.2, 15, 'FOOD'),
+  ('Sandwich', 'Filling meal', 0.3, 25, 'FOOD');
+
+INSERT INTO items (name, description, weight, water_value, item_type) VALUES
+  ('Water Bottle', 'Stay hydrated', 0.5, 20, 'WATER'),
+  ('Sports Drink', 'Electrolytes included', 0.5, 15, 'WATER');
+
+INSERT INTO items (name, description, weight, energy_value, item_type) VALUES
+  ('Sleeping Bag', 'Rest comfortably', 2.0, 30, 'EQUIPMENT'),
+  ('Energy Drink', 'Instant energy', 0.3, 25, 'CONSUMABLE');
 ```
 
-### Step 3: Install Required Packages
+## 2. Environment Variables
 
-1. Open **Window > Package Manager**
-2. Install these packages:
-   - **TextMesh Pro** (Built-in, click Import TMP Essentials when prompted)
-   - **Input System** (Unity Registry)
-   
-Optional but recommended:
-   - **ProBuilder** (for creating custom globe mesh if needed)
+Create a `.env.local` file in the root directory:
 
-### Step 4: Create Initial Scene Setup
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_your-publishable-key-here
+```
 
-1. **Create Main Scene:**
-   - Right-click in `Assets/_Project/Scenes/_Main`
-   - Create > Scene
-   - Name it `MainGame`
-   - Open the scene
+**Important**: Never commit `.env.local` to git. It's already in `.gitignore`.
 
-2. **Create Game Systems GameObject:**
-   - Create Empty GameObject, name it `GameSystems`
-   - Add Components:
-     - `GameManager` script
-     - `SaveManager` script
-     - `ResourceManager` script
-     - `InventoryManager` script
+## 3. Authentication Setup
 
-3. **Create Globe:**
-   - Create 3D Object > Sphere
-   - Name it `Globe`
-   - Set Transform:
-     - Position: (0, 0, 0)
-     - Scale: (10, 10, 10)
-   - Create Material > Name it `GlobeMaterial`
-   - Apply to sphere
+Supabase Auth is already configured. To enable email authentication:
 
-4. **Setup Camera:**
-   - Position Main Camera at: (0, 5, -15)
-   - Rotation: (15, 0, 0)
-   - Field of View: 40
-   - Background: Black or dark blue
+1. Go to Authentication → Settings in Supabase
+2. Enable Email provider
+3. Configure email templates if desired
+4. For development, you can disable email confirmation
 
-### Step 5: Download Globe Texture
+## 4. Running the Application
 
-1. Go to: https://visibleearth.nasa.gov/images/57752/blue-marble-land-surface-shallow-water-and-shaded-topography
-2. Download the **2048x1024** texture
-3. Save to: `Assets/_Project/Art/Textures/earth_texture.jpg`
-4. Import into Unity
-5. Drag onto Globe material
+```bash
+# Install dependencies (if not already done)
+npm install
 
-### Step 6: Test Basic Setup
+# Start development server
+npm run dev
+```
 
-1. Press Play
-2. Check Console for initialization messages:
-   - `[GameManager] Initializing game systems...`
-   
-If you see these, the foundation is working!
+Open [http://localhost:3000](http://localhost:3000)
 
-## What You Have Now
+## 5. Verify Setup
 
-✅ **Project Structure** - Organized folders for all game systems
-✅ **Core Systems** - GameManager, SaveManager with auto-save
-✅ **Data Structures** - ScriptableObjects for Items, Locations, Events
-✅ **Resource Management** - Food, Water, Energy tracking
-✅ **Inventory System** - Weight-based inventory with stacking
-✅ **Globe Foundation** - Helper utilities for lat/long conversion
-✅ **Location Nodes** - Basic node system for the globe
+After starting the dev server, you should be able to:
 
-## Next Steps (Week 1 - Days 3-7)
+1. ✅ **See the landing page** at http://localhost:3000
+2. ✅ **Register a new account** at http://localhost:3000/auth/register
+3. ✅ **Log in** at http://localhost:3000/auth/login
+4. ✅ **Access the game** at http://localhost:3000/game
+5. ✅ **See the 3D globe** with 10 city markers
+6. ✅ **Click a location** to view details
+7. ✅ **Click "Travel Here"** to open travel modal
+8. ✅ **Confirm travel** to move between cities
+9. ✅ **See random events** (30% chance after travel)
+10. ✅ **Manage inventory** and use items
 
-### Day 3: Create Test Content
+## 6. Current Features
 
-1. **Create Test Items:**
-   - Right-click in `Assets/_Project/ScriptableObjects/Items`
-   - Create > Backpacking > Item Data
-   - Create these items:
-     - Energy Bar (Food: 20, Weight: 0.1kg)
-     - Water Bottle (Water: 50, Weight: 1kg)
-     - Tent (Equipment, Weight: 2kg)
+### ✅ Completed (Phase 8)
 
-2. **Create Test Locations:**
-   - Right-click in `Assets/_Project/ScriptableObjects/Locations`
-   - Create > Backpacking > Location Data
-   - Create 3 test locations:
-     - Start Location (Lat: 40.7, Long: -74.0) - New York
-     - Waypoint (Lat: 51.5, Long: -0.1) - London
-     - Destination (Lat: 35.6, Long: 139.7) - Tokyo
+- **Authentication**: Login, register, protected routes
+- **3D Globe**: Interactive Earth with 10 European cities
+- **Resource Management**: Food, water, energy bars with warnings
+- **Inventory System**: 25kg weight limit, use/drop items
+- **Location Info**: City details, difficulty, travel time
+- **Travel System**: Cost calculation, modal preview, validation
+- **Random Events**: 30% trigger chance, resource effects
+- **Testing**: 125 tests passing with full coverage
 
-### Day 4: Build Globe Visualization
+### 🚧 To Be Implemented (Phase 9)
 
-1. Create `GlobeManager` script to:
-   - Spawn LocationNode prefabs on globe
-   - Draw trails between connected locations
-   - Handle globe rotation
+- **Save/Load System**: Connect to game_states table
+- **Auto-save**: On location change
+- **Multiple Save Slots**: Choose which save to load
 
-2. Create LocationNode prefab:
-   - 3D Object > Sphere (scale 0.2)
-   - Add `LocationNode` script
-   - Add Sphere Collider for clicking
-   - Create material with bright color
+## 7. Next Development Steps
 
-### Day 5-7: Build Basic UI
+1. **Implement Save/Load** (Phase 9 - Next)
+   - Create saveGame function in `src/lib/database.ts`
+   - Add save/load buttons to game UI
+   - Connect Zustand store to Supabase game_states
+   - Test save persistence across sessions
 
-1. Create Canvas for game UI
-2. Resource bars (Food, Water, Energy)
-3. Inventory panel
-4. Location info panel
-5. Main menu (New Game, Continue, Quit)
+2. **Future Enhancements** (Post-MVP)
+   - Crafting system (combine items)
+   - Quest/achievement system
+   - Multiplayer features (see other players)
+   - Mobile optimization
 
-## Week 2 Goals
+## 8. Testing
 
-- ✅ Week 1 foundation complete
-- Implement travel system (consuming resources over time)
-- Create event system with popup UI
-- Build 10-15 test events
-- Connect locations with LineRenderers
-- Test full game loop
+Run all tests:
 
-## Resources
+```bash
+npm test
+```
 
-### Free Assets
-- **Globe Texture**: NASA Blue Marble (free)
-- **UI Icons**: Kenney.nl (free game assets)
-- **Font**: Google Fonts (free)
+Run specific test:
 
-### Unity Documentation
-- [ScriptableObjects](https://docs.unity3d.com/Manual/class-ScriptableObject.html)
-- [Input System](https://docs.unity3d.com/Packages/com.unity.inputsystem@latest)
-- [TextMesh Pro](https://docs.unity3d.com/Manual/com.unity.textmeshpro.html)
+```bash
+npx vitest src/components/TravelModal/TravelModal.test.tsx
+```
+
+Watch mode for development:
+
+```bash
+npx vitest --watch
+```
+
+Expected output: **125 tests passing** ✅
+
+## 9. Deployment
+
+When ready to deploy:
+
+1. Push code to GitHub
+2. Import project in Vercel
+3. Add environment variables in Vercel project settings
+4. Configure Supabase Auth redirect URLs:
+   - Add your Vercel URL to "Site URL" in Supabase Auth settings
+   - Add `https://your-app.vercel.app/auth/callback` to "Redirect URLs"
 
 ## Troubleshooting
 
-**Problem:** Scripts show errors
-- **Solution:** Make sure all scripts are in the correct folders and Unity has compiled them
+### Supabase Connection Issues
 
-**Problem:** Globe texture looks wrong
-- **Solution:** Make sure texture wrap mode is set to "Repeat" and filter to "Bilinear"
+- Verify environment variables are set correctly
+- Check Supabase project is not paused (free tier pauses after inactivity)
+- Ensure API keys are copied correctly
 
-**Problem:** Can't click locations
-- **Solution:** LocationNode needs a Collider component
+### Three.js Errors
 
-## Development Tips
+- Three.js only works in browser, not during SSR
+- Use dynamic imports with `ssr: false` for globe component
 
-1. **Test Often** - Press Play frequently to catch issues early
-2. **Use Console** - Check Debug.Log messages for system feedback
-3. **ScriptableObjects** - Create content in the editor, not in code
-4. **Version Control** - Commit after each major feature
-5. **Keep It Simple** - Prototype features before polishing
+### Database Errors
 
-## Questions or Issues?
+- Run database schema SQL before trying to query
+- Check RLS policies if getting permission errors
+- Verify foreign key relationships are correct
 
-Refer back to the development plan in `plans/plan-backpackingGamePrototype.prompt.md` for the full timeline and feature breakdown.
+## Resources
 
-Good luck with your backpacking game! 🎒🌍
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Supabase Documentation](https://supabase.com/docs)
+- [React Three Fiber](https://docs.pmnd.rs/react-three-fiber)
+- [Zustand Documentation](https://docs.pmnd.rs/zustand)
+- [Tailwind CSS](https://tailwindcss.com/docs)
