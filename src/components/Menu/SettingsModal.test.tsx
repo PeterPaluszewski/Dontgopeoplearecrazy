@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { useSettingsStore } from '@/store/settingsStore';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SettingsModal from './SettingsModal';
-import { useSettingsStore } from '@/store/settingsStore';
 
 // Mock the settings store
 vi.mock('@/store/settingsStore', () => ({
@@ -15,14 +15,11 @@ describe('SettingsModal', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useSettingsStore as unknown as ReturnType<typeof vi.fn>).mockImplementation((selector) => {
-      const state = {
-        isMusicEnabled: true,
-        isSoundEnabled: true,
-        toggleMusic: mockToggleMusic,
-        toggleSound: mockToggleSound,
-      };
-      return selector(state);
+    (useSettingsStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      isMusicEnabled: true,
+      isSoundEnabled: true,
+      toggleMusic: mockToggleMusic,
+      toggleSound: mockToggleSound,
     });
   });
 
@@ -57,14 +54,11 @@ describe('SettingsModal', () => {
   });
 
   it('should show music as disabled when music is off', () => {
-    (useSettingsStore as unknown as ReturnType<typeof vi.fn>).mockImplementation((selector) => {
-      const state = {
-        isMusicEnabled: false,
-        isSoundEnabled: true,
-        toggleMusic: mockToggleMusic,
-        toggleSound: mockToggleSound,
-      };
-      return selector(state);
+    (useSettingsStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      isMusicEnabled: false,
+      isSoundEnabled: true,
+      toggleMusic: mockToggleMusic,
+      toggleSound: mockToggleSound,
     });
 
     render(<SettingsModal isOpen={true} onClose={vi.fn()} />);
@@ -91,14 +85,11 @@ describe('SettingsModal', () => {
   });
 
   it('should show sound as disabled when sound is off', () => {
-    (useSettingsStore as unknown as ReturnType<typeof vi.fn>).mockImplementation((selector) => {
-      const state = {
-        isMusicEnabled: true,
-        isSoundEnabled: false,
-        toggleMusic: mockToggleMusic,
-        toggleSound: mockToggleSound,
-      };
-      return selector(state);
+    (useSettingsStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      isMusicEnabled: true,
+      isSoundEnabled: false,
+      toggleMusic: mockToggleMusic,
+      toggleSound: mockToggleSound,
     });
 
     render(<SettingsModal isOpen={true} onClose={vi.fn()} />);
@@ -142,14 +133,11 @@ describe('SettingsModal', () => {
   });
 
   it('should handle both settings being off', () => {
-    (useSettingsStore as unknown as ReturnType<typeof vi.fn>).mockImplementation((selector) => {
-      const state = {
-        isMusicEnabled: false,
-        isSoundEnabled: false,
-        toggleMusic: mockToggleMusic,
-        toggleSound: mockToggleSound,
-      };
-      return selector(state);
+    (useSettingsStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      isMusicEnabled: false,
+      isSoundEnabled: false,
+      toggleMusic: mockToggleMusic,
+      toggleSound: mockToggleSound,
     });
 
     render(<SettingsModal isOpen={true} onClose={vi.fn()} />);

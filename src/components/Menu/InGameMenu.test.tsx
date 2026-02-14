@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import * as saveLoad from '@/lib/save-load';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import InGameMenu from './InGameMenu';
 import { useRouter } from 'next/navigation';
-import * as saveLoad from '@/lib/save-load';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import InGameMenu from './InGameMenu';
 
 // Mock dependencies
 vi.mock('next/navigation', () => ({
@@ -190,12 +190,14 @@ describe('InGameMenu', () => {
     const loadButton = screen.getByText('Load Game');
     await user.click(loadButton);
 
-    // Close LoadGameModal
-    const closeButtons = screen.getAllByText('Close');
-    await user.click(closeButtons[closeButtons.length - 1]); // Get the last Close button
+    // The X button to close the modal
+    const xButtons = screen.getAllByText('×');
+    await user.click(xButtons[xButtons.length - 1]); // Click the last X (from LoadGameModal)
 
-    // LoadGameModal should be closed (only main menu visible)
-    expect(screen.queryByText('No saves found')).not.toBeInTheDocument();
+    // LoadGameModal should be closed
+    await waitFor(() => {
+      expect(screen.queryByText('No saved games found')).not.toBeInTheDocument();
+    });
   });
 
   it('should close SettingsModal when it is closed', async () => {
@@ -207,12 +209,14 @@ describe('InGameMenu', () => {
     const settingsButton = screen.getByText('Settings');
     await user.click(settingsButton);
 
-    // Close SettingsModal
-    const closeButtons = screen.getAllByText('Close');
-    await user.click(closeButtons[closeButtons.length - 1]); // Get the last Close button
+    // Close SettingsModal using X button
+    const xButtons = screen.getAllByText('×');
+    await user.click(xButtons[xButtons.length - 1]); // Click the last X (from SettingsModal)
 
     // SettingsModal should be closed
-    expect(screen.queryByLabelText('Music')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByLabelText('Music')).not.toBeInTheDocument();
+    });
   });
 
   it('should handle multiple modal openings', async () => {

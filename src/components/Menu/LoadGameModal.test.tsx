@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import LoadGameModal from './LoadGameModal';
 import * as saveLoad from '@/lib/save-load';
-import { useRouter } from 'next/navigation';
 import { useGameStore } from '@/store/gameStore';
 import type { GameState } from '@/types/game';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { useRouter } from 'next/navigation';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import LoadGameModal from './LoadGameModal';
 
 // Mock dependencies
 vi.mock('next/navigation', () => ({
@@ -206,13 +206,14 @@ describe('LoadGameModal', () => {
     const deleteButtons = screen.getAllByText('Delete');
     await user.click(deleteButtons[0]);
 
-    // Click Cancel
+    // Wait for confirmation UI
     await waitFor(() => {
-      expect(screen.getByText('Cancel')).toBeInTheDocument();
+      expect(screen.getByText('Are you sure?')).toBeInTheDocument();
     });
     
-    const cancelButtons = screen.getAllByText('Cancel');
-    await user.click(cancelButtons[cancelButtons.length - 1]); // Get the last Cancel button (from confirmation)
+    // Find and click the confirmation Cancel button (in the confirmation dialog)
+    const cancelButton = screen.getByText(/Cancel/);
+    await user.click(cancelButton);
 
     // Confirmation should be hidden
     await waitFor(() => {
@@ -332,18 +333,18 @@ describe('LoadGameModal', () => {
     });
   });
 
-  it('should close modal when Close button is clicked', async () => {
+  it('should close modal when Cancel button is clicked', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
 
     render(<LoadGameModal isOpen={true} onClose={onClose} />);
 
     await waitFor(() => {
-      expect(screen.getByText('Close')).toBeInTheDocument();
+      expect(screen.getByText('Hero 1')).toBeInTheDocument();
     });
 
-    const closeButton = screen.getByText('Close');
-    await user.click(closeButton);
+    const cancelButton = screen.getByText('Cancel');
+    await user.click(cancelButton);
 
     expect(onClose).toHaveBeenCalled();
   });
