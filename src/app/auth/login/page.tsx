@@ -25,7 +25,7 @@ export default function LoginPage() {
 
       if (error) throw error;
 
-      router.push('/game');
+      router.push('/menu');
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to login');

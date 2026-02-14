@@ -347,9 +347,7 @@ describe('save-load', () => {
       const result = await createNewGame('paris');
 
       expect(result.success).toBe(true);
-      expect(result.gameState).toBeDefined();
-      expect(result.gameState?.food).toBe(100);
-      expect(result.gameState?.currentLocationId).toBe('paris');
+      expect(result.gameStateId).toBeDefined();
     });
   });
 });

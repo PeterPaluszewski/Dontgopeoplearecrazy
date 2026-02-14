@@ -35,6 +35,8 @@ export interface GameState {
   inventory: InventoryItem[];
   visitedLocationIds: string[];
   isActive: boolean;
+  difficulty?: 'easy' | 'normal' | 'hard';
+  characterName?: string;
   createdAt: string;
   updatedAt: string;
 }

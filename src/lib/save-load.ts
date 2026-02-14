@@ -116,6 +116,8 @@ export async function loadGame(): Promise<{
       inventory: data.inventory || [],
       visitedLocationIds: data.visited_location_ids || [],
       isActive: data.is_active,
+      difficulty: data.difficulty,
+      characterName: data.character_name,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
     };
@@ -158,7 +160,7 @@ export async function loadAllSaves(): Promise<{
       return { success: false, error: error.message };
     }
 
-    const saves: GameState[] = (data || []).map((save) => ({
+    const saves: GameState[] = data.map((save) => ({
       id: save.id,
       userId: save.user_id,
       currentLocationId: save.current_location_id,
@@ -168,6 +170,8 @@ export async function loadAllSaves(): Promise<{
       inventory: save.inventory || [],
       visitedLocationIds: save.visited_location_ids || [],
       isActive: save.is_active,
+      difficulty: save.difficulty,
+      characterName: save.character_name,
       createdAt: save.created_at,
       updatedAt: save.updated_at,
     }));
@@ -214,52 +218,73 @@ export async function deleteSave(saveId: string): Promise<{ success: boolean; er
 }
 
 /**
- * Create a new game state with default values
+ * Create a new game state with specified starting parameters
  */
 export async function createNewGame(
-  startingLocationId: string
-): Promise<{ success: boolean; gameState?: GameState; error?: string }> {
-  const newGameState: Omit<GameState, 'userId' | 'id' | 'createdAt' | 'updatedAt'> = {
-    currentLocationId: startingLocationId,
-    food: 100,
-    water: 100,
-    energy: 100,
-    inventory: [],
-    visitedLocationIds: [startingLocationId],
-    isActive: true,
-  };
+  startingLocationId: string,
+  difficulty: 'easy' | 'normal' | 'hard' = 'normal',
+  characterName?: string
+): Promise<{ success: boolean; gameStateId?: string; error?: string }> {
+  try {
+    const supabase = createClient();
 
-  const result = await saveGame(newGameState);
+    // Get current user
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return { success: false, error: 'User not authenticated' };
+    }
 
-  if (!result.success || !result.gameStateId) {
-    return { success: false, error: result.error };
+    // Difficulty modifiers
+    const difficultySettings = {
+      easy: { food: 100, water: 100, energy: 100 },
+      normal: { food: 80, water: 80, energy: 80 },
+      hard: { food: 60, water: 60, energy: 60 },
+    };
+
+    const startingResources = difficultySettings[difficulty];
+
+    // Create new game state
+    const { data, error } = await supabase
+      .from('game_states')
+      .insert({
+        user_id: user.id,
+        current_location_id: startingLocationId,
+        food: startingResources.food,
+        water: startingResources.water,
+        energy: startingResources.energy,
+        inventory: [],
+        visited_location_ids: [startingLocationId],
+        is_active: true,
+        difficulty,
+        character_name: characterName,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      const errorMsg = error.message || error.hint || 'Unknown database error';
+      console.error('Error creating new game - Full error:', JSON.stringify(error, null, 2));
+      console.error('Error creating new game - Message:', errorMsg);
+      console.error('Error creating new game - Details:', error.details);
+      console.error('Error creating new game - Code:', error.code);
+      return { success: false, error: errorMsg };
+    }
+
+    if (!data) {
+      console.error('Error creating new game: No data returned from insert');
+      return { success: false, error: 'Failed to create game state - no data returned' };
+    }
+
+    return { success: true, gameStateId: data.id };
+  } catch (error) {
+    console.error('Error creating new game - Caught exception:', error);
+    console.error('Error creating new game - Type:', typeof error);
+    console.error('Error creating new game - Constructor:', error?.constructor?.name);
+    
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return { success: false, error: errorMsg || 'Unknown error occurred' };
   }
-
-  // Load the newly created game to get full state
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('game_states')
-    .select('*')
-    .eq('id', result.gameStateId)
-    .single();
-
-  if (error || !data) {
-    return { success: false, error: error?.message || 'Failed to load new game' };
-  }
-
-  const gameState: GameState = {
-    id: data.id,
-    userId: data.user_id,
-    currentLocationId: data.current_location_id,
-    food: data.food,
-    water: data.water,
-    energy: data.energy,
-    inventory: data.inventory || [],
-    visitedLocationIds: data.visited_location_ids || [],
-    isActive: data.is_active,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
-  };
-
-  return { success: true, gameState };
 }
