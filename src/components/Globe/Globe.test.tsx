@@ -1,7 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import Globe from './Globe';
 import type { Location } from '@/types/game';
+import { render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import Globe from './Globe';
+
+// Mock the calculateGlobeRotation function
+vi.mock('@/lib/globe-utils', () => ({
+  calculateGlobeRotation: vi.fn(() => ({ rotationX: 0, rotationY: 0 })),
+}));
 
 // Mock Three.js components
 vi.mock('@react-three/fiber', () => ({

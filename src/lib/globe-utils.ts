@@ -68,3 +68,32 @@ export function getMarkerColor(isVisited: boolean, isCurrent: boolean): string {
   if (isVisited) return '#3b82f6'; // Blue for visited
   return '#6b7280'; // Gray for unvisited
 }
+
+/**
+ * Calculate globe rotation to bring a location to face the camera
+ * @param lat Latitude in degrees (-90 to 90)
+ * @param lon Longitude in degrees (-180 to 180)
+ * @param globeRadius Radius of the globe
+ * @returns Object with rotationX and rotationY in radians
+ */
+export function calculateGlobeRotation(
+  lat: number,
+  lon: number,
+  globeRadius: number
+): { rotationX: number; rotationY: number } {
+  // Get the 3D position of the location
+  const targetPos = latLonToVector3(lat, lon, globeRadius);
+  
+  // Calculate rotation to bring this point to face the camera (at [0, 0, positive Z])
+  // Y rotation: rotate around vertical axis to align longitude
+  const rotationY = -Math.atan2(targetPos.x, targetPos.z);
+  
+  // X rotation: rotate around horizontal axis to align latitude
+  // We need to tilt the globe so the point faces forward
+  // After Y rotation, the point is in the YZ plane, so we use atan2(y, z)
+  // Positive angle means point is above equator, needs negative rotation to tilt down
+  const xzDistance = Math.sqrt(targetPos.x ** 2 + targetPos.z ** 2);
+  const rotationX = Math.atan2(targetPos.y, xzDistance); // Changed sign: removed the negative
+  
+  return { rotationX, rotationY };
+}

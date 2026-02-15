@@ -1,10 +1,11 @@
 'use client';
 
-import { latLonToVector3 } from '@/lib/globe-utils';
+import { calculateGlobeRotation } from '@/lib/globe-utils';
 import type { Location } from '@/types/game';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
 import { Suspense, useEffect, useRef, useState } from 'react';
+import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsType } from 'three-stdlib';
 import GlobeSphere from './GlobeSphere';
 import LocationMarker from './LocationMarker';
@@ -24,15 +25,21 @@ export default function Globe({
 }: GlobeProps) {
   const [hoveredLocation, setHoveredLocation] = useState<Location | null>(null);
   const controlsRef = useRef<OrbitControlsType>(null);
-  const [initialTarget, setInitialTarget] = useState<[number, number, number]>([0, 0, 0]);
+  const groupRef = useRef<THREE.Group>(null);
 
-  // Calculate initial camera target based on current location
+  // Rotate globe to show current location on load
   useEffect(() => {
-    if (currentLocationId && locations.length > 0) {
+    if (currentLocationId && locations.length > 0 && groupRef.current?.rotation) {
       const currentLocation = locations.find(loc => loc.id === currentLocationId);
       if (currentLocation) {
-        const position = latLonToVector3(currentLocation.latitude, currentLocation.longitude, 2.5);
-        setInitialTarget([position.x, position.y, position.z]);
+        const { rotationX, rotationY } = calculateGlobeRotation(
+          currentLocation.latitude,
+          currentLocation.longitude,
+          2 // globe radius
+        );
+        
+        groupRef.current.rotation.y = rotationY;
+        groupRef.current.rotation.x = rotationX;
       }
     }
   }, [currentLocationId, locations]);
@@ -50,7 +57,7 @@ export default function Globe({
           <pointLight position={[-5, -5, -5]} intensity={0.5} />
 
           {/* Globe and Markers - grouped together so they rotate as one */}
-          <group>
+          <group ref={groupRef}>
             <GlobeSphere />
             {/* Location Markers */}
             {locations.map((location) => (
@@ -68,7 +75,6 @@ export default function Globe({
           {/* Controls for rotation and zoom */}
           <OrbitControls
             ref={controlsRef}
-            target={initialTarget}
             enablePan={false}
             enableZoom={true}
             minDistance={4}
