@@ -24,6 +24,10 @@ vi.mock('./GlobeSphere', () => ({
   default: () => <div data-testid="globe-sphere" />,
 }));
 
+vi.mock('./ConnectionLines', () => ({
+  default: () => <div data-testid="connection-lines" />,
+}));
+
 vi.mock('./LocationMarker', () => ({
   default: ({ location, onClick }: { location: Location; onClick: () => void }) => (
     <div data-testid={`marker-${location.id}`} onClick={onClick}>
@@ -92,6 +96,19 @@ describe('Globe', () => {
     );
 
     expect(screen.getByTestId('globe-sphere')).toBeInTheDocument();
+  });
+
+  it('should render connection lines', () => {
+    render(
+      <Globe
+        locations={mockLocations}
+        currentLocationId="1"
+        visitedLocationIds={['1']}
+        onLocationClick={mockOnLocationClick}
+      />
+    );
+
+    expect(screen.getByTestId('connection-lines')).toBeInTheDocument();
   });
 
   it('should render all location markers', () => {

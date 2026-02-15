@@ -1,10 +1,10 @@
 'use client';
 
-import { useRef } from 'react';
-import { useFrame } from '@react-three/fiber';
-import * as THREE from 'three';
+import { getMarkerColor, getMarkerPosition } from '@/lib/globe-utils';
 import type { Location } from '@/types/game';
-import { getMarkerPosition, getMarkerColor } from '@/lib/globe-utils';
+import { useFrame, useThree } from '@react-three/fiber';
+import { useRef } from 'react';
+import * as THREE from 'three';
 
 interface LocationMarkerProps {
   location: Location;
@@ -21,8 +21,10 @@ export default function LocationMarker({
   onClick,
   onHover,
 }: LocationMarkerProps) {
+  const groupRef = useRef<THREE.Group>(null);
   const markerRef = useRef<THREE.Mesh>(null);
   const pulseRef = useRef<THREE.Mesh>(null);
+  const { camera } = useThree();
 
   // Animate current location marker
   useFrame((state) => {
@@ -30,13 +32,19 @@ export default function LocationMarker({
       const pulse = Math.sin(state.clock.elapsedTime * 3) * 0.2 + 1;
       pulseRef.current.scale.set(pulse, pulse, pulse);
     }
+
+    if (groupRef.current) {
+      const distance = camera.position.length();
+      const scale = THREE.MathUtils.clamp(distance / 6, 0.6, 1.6);
+      groupRef.current.scale.setScalar(scale);
+    }
   });
 
   const position = getMarkerPosition(location.latitude, location.longitude, 2);
   const color = getMarkerColor(isVisited, isCurrent);
 
   return (
-    <group position={position}>
+    <group ref={groupRef} position={position}>
       {/* Main marker pin */}
       <mesh
         ref={markerRef}

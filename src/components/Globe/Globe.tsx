@@ -7,6 +7,7 @@ import { Canvas } from '@react-three/fiber';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsType } from 'three-stdlib';
+import ConnectionLines from './ConnectionLines';
 import GlobeSphere from './GlobeSphere';
 import LocationMarker from './LocationMarker';
 
@@ -59,6 +60,7 @@ export default function Globe({
           {/* Globe and Markers - grouped together so they rotate as one */}
           <group ref={groupRef}>
             <GlobeSphere />
+            <ConnectionLines locations={locations} globeRadius={2} />
             {/* Location Markers */}
             {locations.map((location) => (
               <LocationMarker

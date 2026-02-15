@@ -29,7 +29,7 @@ export function getMarkerPosition(
   lat: number,
   lon: number,
   globeRadius: number,
-  height: number = 0.1
+  height: number = 0.01
 ): THREE.Vector3 {
   return latLonToVector3(lat, lon, globeRadius + height);
 }

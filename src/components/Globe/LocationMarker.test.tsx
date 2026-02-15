@@ -1,5 +1,7 @@
 import type { Location } from '@/types/game';
+import { render } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import LocationMarker from './LocationMarker';
 
 // Mock Three.js completely
 vi.mock('three', async () => {
@@ -15,6 +17,13 @@ vi.mock('three', async () => {
 vi.mock('@react-three/fiber', () => ({
   useFrame: vi.fn((callback) => {
     // Don't execute the animation callback in tests
+  }),
+  useThree: () => ({
+    camera: {
+      position: {
+        length: () => 6,
+      },
+    },
   }),
 }));
 
@@ -115,5 +124,19 @@ describe('LocationMarker', () => {
       expect(typeof location.latitude).toBe('number');
       expect(typeof location.longitude).toBe('number');
     });
+  });
+
+  it('should render without crashing', () => {
+    const { baseElement } = render(
+      <LocationMarker
+        location={mockLocation}
+        isVisited={false}
+        isCurrent={false}
+        onClick={mockOnClick}
+        onHover={mockOnHover}
+      />
+    );
+
+    expect(baseElement).toBeTruthy();
   });
 });
