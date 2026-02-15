@@ -3,10 +3,9 @@
 import EventModal from '@/components/EventModal/EventModal';
 import InventoryPanel from '@/components/InventoryPanel/InventoryPanel';
 import LocationInfo from '@/components/LocationInfo/LocationInfo';
-import ResourcePanel from '@/components/ResourcePanel/ResourcePanel';
-import SaveLoadPanel from '@/components/SaveLoadPanel/SaveLoadPanel';
-import TravelModal from '@/components/TravelModal/TravelModal';
 import InGameMenu from '@/components/Menu/InGameMenu';
+import ResourcePanel from '@/components/ResourcePanel/ResourcePanel';
+import TravelModal from '@/components/TravelModal/TravelModal';
 import { getAllLocations } from '@/lib/database';
 import { GameEvent, triggerRandomEvent } from '@/lib/events';
 import { createClient } from '@/lib/supabase';
@@ -152,6 +151,21 @@ export default function GamePage() {
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <h1 className="text-2xl font-bold">🎒 Backpacking Adventure</h1>
           <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowInGameMenu(true)}
+              className="flex items-center gap-2 rounded-lg bg-slate-700 px-4 py-2 text-white transition-all hover:bg-slate-600"
+              title="Open Menu (ESC)"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+              <span className="font-medium">Menu</span>
+            </button>
             <span className="text-gray-400">{user?.email}</span>
             <button
               onClick={handleLogout}
@@ -164,25 +178,10 @@ export default function GamePage() {
       </nav>
 
       <main className="flex-1 relative overflow-hidden">
-        {/* Menu Button - Top Left */}
-        <button
-          onClick={() => setShowInGameMenu(true)}
-          className="absolute top-4 left-4 z-20 rounded-lg bg-slate-800/90 px-4 py-2 text-white shadow-lg backdrop-blur-sm transition-all hover:bg-slate-700 hover:scale-105"
-          title="Open Menu (ESC)"
-        >
-          <div className="flex items-center gap-2">
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-            <span className="font-semibold">Menu</span>
-          </div>
-        </button>
-
         {/* Left Panel - Resources and Inventory */}
-        <div className="absolute top-16 left-4 z-10 space-y-4">
+        <div className="absolute top-4 left-4 z-10 space-y-4">
           <ResourcePanel />
           <InventoryPanel />
-          <SaveLoadPanel />
         </div>
 
         {/* Right Panel - Location Info */}
@@ -221,10 +220,7 @@ export default function GamePage() {
         )}
 
         {/* In-Game Menu (ESC) */}
-        <InGameMenu
-          isOpen={showInGameMenu}
-          onClose={() => setShowInGameMenu(false)}
-        />
+        <InGameMenu isOpen={showInGameMenu} onClose={() => setShowInGameMenu(false)} />
       </main>
     </div>
   );
