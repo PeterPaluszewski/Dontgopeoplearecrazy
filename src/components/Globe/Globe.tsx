@@ -1,9 +1,11 @@
 'use client';
 
+import { latLonToVector3 } from '@/lib/globe-utils';
 import type { Location } from '@/types/game';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import { Canvas } from '@react-three/fiber';
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import type { OrbitControls as OrbitControlsType } from 'three-stdlib';
 import GlobeSphere from './GlobeSphere';
 import LocationMarker from './LocationMarker';
 
@@ -21,6 +23,19 @@ export default function Globe({
   onLocationClick,
 }: GlobeProps) {
   const [hoveredLocation, setHoveredLocation] = useState<Location | null>(null);
+  const controlsRef = useRef<OrbitControlsType>(null);
+  const [initialTarget, setInitialTarget] = useState<[number, number, number]>([0, 0, 0]);
+
+  // Calculate initial camera target based on current location
+  useEffect(() => {
+    if (currentLocationId && locations.length > 0) {
+      const currentLocation = locations.find(loc => loc.id === currentLocationId);
+      if (currentLocation) {
+        const position = latLonToVector3(currentLocation.latitude, currentLocation.longitude, 2.5);
+        setInitialTarget([position.x, position.y, position.z]);
+      }
+    }
+  }, [currentLocationId, locations]);
 
   return (
     <div className="relative w-full h-full">
@@ -52,6 +67,8 @@ export default function Globe({
 
           {/* Controls for rotation and zoom */}
           <OrbitControls
+            ref={controlsRef}
+            target={initialTarget}
             enablePan={false}
             enableZoom={true}
             minDistance={4}
