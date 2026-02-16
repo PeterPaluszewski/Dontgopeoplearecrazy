@@ -67,17 +67,17 @@ export default function Globe({
     const lastZoomRef = useRef<boolean | null>(null);
 
     useFrame(({ clock }) => {
+      const zoomedIn = camera.position.z <= 3;
+      if (lastZoomRef.current !== zoomedIn) {
+        lastZoomRef.current = zoomedIn;
+        setShowBorders(zoomedIn);
+      }
+
       if (!onUpdate || !groupRef.current) return;
 
       const now = clock.getElapsedTime();
       if (now - lastUpdateRef.current < 0.1) return;
       lastUpdateRef.current = now;
-
-      const zoomedIn = camera.position.z < 3;
-      if (lastZoomRef.current !== zoomedIn) {
-        lastZoomRef.current = zoomedIn;
-        setShowBorders(zoomedIn);
-      }
 
       upVectorRef.current.set(0, 1, 0).applyEuler(groupRef.current.rotation);
       const headingDegrees = getHeadingDegreesFromVector(

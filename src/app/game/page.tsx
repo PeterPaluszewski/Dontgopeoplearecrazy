@@ -42,6 +42,7 @@ export default function GamePage() {
   const [currentEvent, setCurrentEvent] = useState<GameEvent | null>(null);
   const [eventModalOpen, setEventModalOpen] = useState(false);
   const [globeDebug, setGlobeDebug] = useState<GlobeDebugInfo | null>(null);
+  const [showGlobeDebug, setShowGlobeDebug] = useState(true);
   const router = useRouter();
   const {
     currentLocationId,
@@ -205,64 +206,75 @@ export default function GamePage() {
         <div className="absolute top-4 right-4 w-96 z-10">
           <LocationInfo location={selectedLocation} onTravelClick={handleTravelClick} />
           <div className="mt-4 bg-gray-800/95 rounded-lg p-4 shadow-xl border border-gray-700 backdrop-blur-sm">
-            <div className="text-sm font-semibold text-gray-200 mb-3">Globe Debug</div>
-            <div className="space-y-2 text-xs text-gray-300">
-              <div>
-                <div className="text-gray-400">Camera Position</div>
-                <div className="font-mono">
-                  {globeDebug
-                    ? `${globeDebug.cameraPosition.x.toFixed(2)}, ${globeDebug.cameraPosition.y.toFixed(2)}, ${globeDebug.cameraPosition.z.toFixed(2)}`
-                    : '—'}
-                </div>
-              </div>
-              <div>
-                <div className="text-gray-400">Globe Rotation (rad)</div>
-                <div className="font-mono">
-                  {globeDebug
-                    ? `${globeDebug.globeRotation.x.toFixed(2)}, ${globeDebug.globeRotation.y.toFixed(2)}, ${globeDebug.globeRotation.z.toFixed(2)}`
-                    : '—'}
-                </div>
-                <div className="font-mono text-gray-400">
-                  {selectedLocation
-                    ? (() => {
-                        const expectedQuat = calculateGlobeQuaternion(
-                          selectedLocation.latitude,
-                          selectedLocation.longitude,
-                          2
-                        );
-                        const expectedEuler = new THREE.Euler().setFromQuaternion(
-                          expectedQuat,
-                          'YXZ'
-                        );
-                        return `exp ${expectedEuler.x.toFixed(2)}, ${expectedEuler.y.toFixed(2)}, ${expectedEuler.z.toFixed(2)}`;
-                      })()
-                    : '—'}
-                </div>
-              </div>
-              <div>
-                <div className="text-gray-400">Current Coordinates</div>
-                <div className="font-mono">
-                  {selectedLocation
-                    ? `${selectedLocation.latitude.toFixed(2)}°, ${selectedLocation.longitude.toFixed(2)}°`
-                    : '—'}
-                </div>
-                <div className="font-mono text-gray-400">
-                  {selectedLocation
-                    ? `${(selectedLocation.latitude * (Math.PI / 180)).toFixed(3)} rad, ${(
-                        selectedLocation.longitude * (Math.PI / 180)
-                      ).toFixed(3)} rad`
-                    : '—'}
-                </div>
-              </div>
-              <div>
-                <div className="text-gray-400">Compass Up</div>
-                <div className="font-mono">
-                  {globeDebug
-                    ? `${globeDebug.compassUp.label} (${globeDebug.compassUp.headingDegrees.toFixed(1)}°)`
-                    : '—'}
-                </div>
-              </div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-sm font-semibold text-gray-200">Globe Debug</div>
+              <button
+                type="button"
+                className="text-xs text-blue-300 hover:text-blue-200"
+                onClick={() => setShowGlobeDebug((prev) => !prev)}
+              >
+                {showGlobeDebug ? 'Hide' : 'Show'}
+              </button>
             </div>
+            {showGlobeDebug && (
+              <div className="space-y-2 text-xs text-gray-300">
+                <div>
+                  <div className="text-gray-400">Camera Position</div>
+                  <div className="font-mono">
+                    {globeDebug
+                      ? `${globeDebug.cameraPosition.x.toFixed(2)}, ${globeDebug.cameraPosition.y.toFixed(2)}, ${globeDebug.cameraPosition.z.toFixed(2)}`
+                      : '—'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-400">Globe Rotation (rad)</div>
+                  <div className="font-mono">
+                    {globeDebug
+                      ? `${globeDebug.globeRotation.x.toFixed(2)}, ${globeDebug.globeRotation.y.toFixed(2)}, ${globeDebug.globeRotation.z.toFixed(2)}`
+                      : '—'}
+                  </div>
+                  <div className="font-mono text-gray-400">
+                    {selectedLocation
+                      ? (() => {
+                          const expectedQuat = calculateGlobeQuaternion(
+                            selectedLocation.latitude,
+                            selectedLocation.longitude,
+                            2
+                          );
+                          const expectedEuler = new THREE.Euler().setFromQuaternion(
+                            expectedQuat,
+                            'YXZ'
+                          );
+                          return `exp ${expectedEuler.x.toFixed(2)}, ${expectedEuler.y.toFixed(2)}, ${expectedEuler.z.toFixed(2)}`;
+                        })()
+                      : '—'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-400">Current Coordinates</div>
+                  <div className="font-mono">
+                    {selectedLocation
+                      ? `${selectedLocation.latitude.toFixed(2)}°, ${selectedLocation.longitude.toFixed(2)}°`
+                      : '—'}
+                  </div>
+                  <div className="font-mono text-gray-400">
+                    {selectedLocation
+                      ? `${(selectedLocation.latitude * (Math.PI / 180)).toFixed(3)} rad, ${(
+                          selectedLocation.longitude * (Math.PI / 180)
+                        ).toFixed(3)} rad`
+                      : '—'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-400">Compass Up</div>
+                  <div className="font-mono">
+                    {globeDebug
+                      ? `${globeDebug.compassUp.label} (${globeDebug.compassUp.headingDegrees.toFixed(1)}°)`
+                      : '—'}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
