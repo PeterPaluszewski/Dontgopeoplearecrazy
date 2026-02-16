@@ -36,6 +36,10 @@ vi.mock('./ConnectionLines', () => ({
   default: () => <div data-testid="connection-lines" />,
 }));
 
+vi.mock('./CountryBordersOverlay', () => ({
+  default: () => <div data-testid="country-borders" />,
+}));
+
 vi.mock('./LocationMarker', () => ({
   default: ({ location, onClick }: { location: Location; onClick: () => void }) => (
     <div data-testid={`marker-${location.id}`} onClick={onClick}>

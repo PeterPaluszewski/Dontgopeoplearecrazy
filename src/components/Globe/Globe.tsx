@@ -9,6 +9,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsType } from 'three-stdlib';
 import ConnectionLines from './ConnectionLines';
+import CountryBordersOverlay from './CountryBordersOverlay';
 import GlobeSphere from './GlobeSphere';
 import LocationMarker from './LocationMarker';
 
@@ -41,6 +42,7 @@ export default function Globe({
   const controlsRef = useRef<OrbitControlsType>(null);
   const groupRef = useRef<THREE.Group>(null);
   const dragState = useRef({ isDragging: false, lastX: 0, lastY: 0 });
+  const [showBorders, setShowBorders] = useState(false);
 
   // Rotate globe to show current location on load
   useEffect(() => {
@@ -62,6 +64,7 @@ export default function Globe({
     const { camera } = useThree();
     const lastUpdateRef = useRef(0);
     const upVectorRef = useRef(new THREE.Vector3());
+    const lastZoomRef = useRef<boolean | null>(null);
 
     useFrame(({ clock }) => {
       if (!onUpdate || !groupRef.current) return;
@@ -69,6 +72,12 @@ export default function Globe({
       const now = clock.getElapsedTime();
       if (now - lastUpdateRef.current < 0.1) return;
       lastUpdateRef.current = now;
+
+      const zoomedIn = camera.position.z < 3;
+      if (lastZoomRef.current !== zoomedIn) {
+        lastZoomRef.current = zoomedIn;
+        setShowBorders(zoomedIn);
+      }
 
       upVectorRef.current.set(0, 1, 0).applyEuler(groupRef.current.rotation);
       const headingDegrees = getHeadingDegreesFromVector(
@@ -155,6 +164,7 @@ export default function Globe({
           <group ref={groupRef}>
             <GlobeSphere />
             <ConnectionLines locations={locations} globeRadius={2} />
+            {showBorders && <CountryBordersOverlay globeRadius={2} />}
             {/* Location Markers */}
             {locations.map((location) => (
               <LocationMarker
@@ -176,7 +186,7 @@ export default function Globe({
             enablePan={false}
             enableZoom={true}
             enableRotate={false}
-            minDistance={3}
+            minDistance={2}
             maxDistance={10}
             autoRotate={false}
             autoRotateSpeed={0.5}
