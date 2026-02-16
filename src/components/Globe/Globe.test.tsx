@@ -5,7 +5,8 @@ import Globe from './Globe';
 
 // Mock the calculateGlobeRotation function
 vi.mock('@/lib/globe-utils', () => ({
-  calculateGlobeRotation: vi.fn(() => ({ rotationX: 0, rotationY: 0 })),
+  calculateGlobeRotation: vi.fn(() => ({ rotationX: 0, rotationY: 0, rotationZ: 0 })),
+  calculateGlobeQuaternion: vi.fn(() => ({ x: 0, y: 0, z: 0, w: 1 })),
 }));
 
 // Mock Three.js components
@@ -13,6 +14,13 @@ vi.mock('@react-three/fiber', () => ({
   Canvas: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="canvas">{children}</div>
   ),
+  useThree: () => ({
+    camera: {
+      position: { x: 0, y: 0, z: 6 },
+      quaternion: { x: 0, y: 0, z: 0, w: 1 },
+    },
+  }),
+  useFrame: () => {},
 }));
 
 vi.mock('@react-three/drei', () => ({

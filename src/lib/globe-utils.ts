@@ -80,20 +80,25 @@ export function calculateGlobeRotation(
   lat: number,
   lon: number,
   globeRadius: number
-): { rotationX: number; rotationY: number } {
+): { rotationX: number; rotationY: number; rotationZ: number } {
   // Get the 3D position of the location
   const targetPos = latLonToVector3(lat, lon, globeRadius);
-  
-  // Calculate rotation to bring this point to face the camera (at [0, 0, positive Z])
-  // Y rotation: rotate around vertical axis to align longitude
-  const rotationY = -Math.atan2(targetPos.x, targetPos.z);
-  
-  // X rotation: rotate around horizontal axis to align latitude
-  // We need to tilt the globe so the point faces forward
-  // After Y rotation, the point is in the YZ plane, so we use atan2(y, z)
-  // Positive angle means point is above equator, needs negative rotation to tilt down
-  const xzDistance = Math.sqrt(targetPos.x ** 2 + targetPos.z ** 2);
-  const rotationX = Math.atan2(targetPos.y, xzDistance); // Changed sign: removed the negative
-  
-  return { rotationX, rotationY };
+
+  const targetDir = targetPos.clone().normalize();
+  const cameraDir = new THREE.Vector3(0, 0, 1);
+  const rotationQuat = new THREE.Quaternion().setFromUnitVectors(targetDir, cameraDir);
+  const rotationEuler = new THREE.Euler().setFromQuaternion(rotationQuat, 'YXZ');
+
+  return { rotationX: rotationEuler.x, rotationY: rotationEuler.y, rotationZ: rotationEuler.z };
+}
+
+export function calculateGlobeQuaternion(
+  lat: number,
+  lon: number,
+  globeRadius: number
+): THREE.Quaternion {
+  const targetPos = latLonToVector3(lat, lon, globeRadius);
+  const targetDir = targetPos.clone().normalize();
+  const cameraDir = new THREE.Vector3(0, 0, 1);
+  return new THREE.Quaternion().setFromUnitVectors(targetDir, cameraDir);
 }
