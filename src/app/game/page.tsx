@@ -1,6 +1,7 @@
 'use client';
 
 import EventModal from '@/components/EventModal/EventModal';
+import type { GlobeDebugInfo } from '@/components/Globe/Globe';
 import InventoryPanel from '@/components/InventoryPanel/InventoryPanel';
 import LocationInfo from '@/components/LocationInfo/LocationInfo';
 import InGameMenu from '@/components/Menu/InGameMenu';
@@ -8,6 +9,8 @@ import ResourcePanel from '@/components/ResourcePanel/ResourcePanel';
 import TravelModal from '@/components/TravelModal/TravelModal';
 import { getAllLocations } from '@/lib/database';
 import { GameEvent, triggerRandomEvent } from '@/lib/events';
+import { calculateGlobeQuaternion } from '@/lib/globe-utils';
+import { findLocationById, getDefaultLocation } from '@/lib/location-utils';
 import { createClient } from '@/lib/supabase';
 import { calculateTravelCost } from '@/lib/travel-utils';
 import { useGameStore } from '@/store/gameStore';
@@ -16,6 +19,7 @@ import type { User } from '@supabase/supabase-js';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import * as THREE from 'three';
 
 // Dynamically import Globe to prevent SSR issues with Three.js
 const Globe = dynamic(() => import('@/components/Globe/Globe'), {
@@ -37,11 +41,14 @@ export default function GamePage() {
   const [travelDestination, setTravelDestination] = useState<Location | null>(null);
   const [currentEvent, setCurrentEvent] = useState<GameEvent | null>(null);
   const [eventModalOpen, setEventModalOpen] = useState(false);
+  const [globeDebug, setGlobeDebug] = useState<GlobeDebugInfo | null>(null);
+  const [showGlobeDebug, setShowGlobeDebug] = useState(true);
   const router = useRouter();
   const {
     currentLocationId,
     visitedLocationIds,
     visitLocation,
+    setCurrentLocationId,
     travelToLocation,
     loadGameFromDB,
     saveGame,
@@ -68,21 +75,32 @@ export default function GamePage() {
       const locs = await getAllLocations();
       setLocations(locs);
 
+      const latestLocationId = useGameStore.getState().currentLocationId;
+      const current = findLocationById(locs, latestLocationId);
+      const fallback = getDefaultLocation(locs);
+
       // Set starting location if none set (Paris as default)
-      if (!currentLocationId && locs.length > 0) {
-        const paris = locs.find((loc) => loc.name === 'Paris') || locs[0];
-        visitLocation(paris.id);
-        setSelectedLocation(paris);
-      } else if (currentLocationId) {
-        const current = locs.find((loc) => loc.id === currentLocationId);
-        setSelectedLocation(current || null);
+      if (!latestLocationId && fallback) {
+        visitLocation(fallback.id);
+        setCurrentLocationId(fallback.id);
+        setSelectedLocation(fallback);
+      } else {
+        setSelectedLocation(current || fallback || null);
       }
 
       setLoading(false);
     };
 
     checkUser();
-  }, [router, currentLocationId, visitLocation, loadGameFromDB]);
+  }, [router, visitLocation, setCurrentLocationId, loadGameFromDB]);
+
+  useEffect(() => {
+    if (locations.length === 0) return;
+    const current = findLocationById(locations, currentLocationId);
+    if (current) {
+      setSelectedLocation(current);
+    }
+  }, [currentLocationId, locations]);
 
   // ESC key handler for in-game menu
   useEffect(() => {
@@ -187,6 +205,77 @@ export default function GamePage() {
         {/* Right Panel - Location Info */}
         <div className="absolute top-4 right-4 w-96 z-10">
           <LocationInfo location={selectedLocation} onTravelClick={handleTravelClick} />
+          <div className="mt-4 bg-gray-800/95 rounded-lg p-4 shadow-xl border border-gray-700 backdrop-blur-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-sm font-semibold text-gray-200">Globe Debug</div>
+              <button
+                type="button"
+                className="text-xs text-blue-300 hover:text-blue-200"
+                onClick={() => setShowGlobeDebug((prev) => !prev)}
+              >
+                {showGlobeDebug ? 'Hide' : 'Show'}
+              </button>
+            </div>
+            {showGlobeDebug && (
+              <div className="space-y-2 text-xs text-gray-300">
+                <div>
+                  <div className="text-gray-400">Camera Position</div>
+                  <div className="font-mono">
+                    {globeDebug
+                      ? `${globeDebug.cameraPosition.x.toFixed(2)}, ${globeDebug.cameraPosition.y.toFixed(2)}, ${globeDebug.cameraPosition.z.toFixed(2)}`
+                      : '—'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-400">Globe Rotation (rad)</div>
+                  <div className="font-mono">
+                    {globeDebug
+                      ? `${globeDebug.globeRotation.x.toFixed(2)}, ${globeDebug.globeRotation.y.toFixed(2)}, ${globeDebug.globeRotation.z.toFixed(2)}`
+                      : '—'}
+                  </div>
+                  <div className="font-mono text-gray-400">
+                    {selectedLocation
+                      ? (() => {
+                          const expectedQuat = calculateGlobeQuaternion(
+                            selectedLocation.latitude,
+                            selectedLocation.longitude,
+                            2
+                          );
+                          const expectedEuler = new THREE.Euler().setFromQuaternion(
+                            expectedQuat,
+                            'YXZ'
+                          );
+                          return `exp ${expectedEuler.x.toFixed(2)}, ${expectedEuler.y.toFixed(2)}, ${expectedEuler.z.toFixed(2)}`;
+                        })()
+                      : '—'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-400">Current Coordinates</div>
+                  <div className="font-mono">
+                    {selectedLocation
+                      ? `${selectedLocation.latitude.toFixed(2)}°, ${selectedLocation.longitude.toFixed(2)}°`
+                      : '—'}
+                  </div>
+                  <div className="font-mono text-gray-400">
+                    {selectedLocation
+                      ? `${(selectedLocation.latitude * (Math.PI / 180)).toFixed(3)} rad, ${(
+                          selectedLocation.longitude * (Math.PI / 180)
+                        ).toFixed(3)} rad`
+                      : '—'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-gray-400">Compass Up</div>
+                  <div className="font-mono">
+                    {globeDebug
+                      ? `${globeDebug.compassUp.label} (${globeDebug.compassUp.headingDegrees.toFixed(1)}°)`
+                      : '—'}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Globe - Full screen */}
@@ -195,6 +284,7 @@ export default function GamePage() {
           currentLocationId={currentLocationId}
           visitedLocationIds={visitedLocationIds}
           onLocationClick={handleLocationClick}
+          onDebugUpdate={setGlobeDebug}
         />
 
         {/* Travel Modal */}

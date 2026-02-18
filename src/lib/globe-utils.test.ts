@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import {
   calculateDistance,
+  calculateGlobeQuaternion,
   calculateGlobeRotation,
   getMarkerColor,
   getMarkerPosition,
@@ -155,96 +156,93 @@ describe('globe-utils', () => {
   describe('calculateGlobeRotation', () => {
     const globeRadius = 2;
 
-    it('should calculate rotation to show equator prime meridian (0, 0)', () => {
-      const { rotationX, rotationY } = calculateGlobeRotation(0, 0, globeRadius);
+    const expectRotatesToCamera = (lat: number, lon: number) => {
+      const { rotationX, rotationY, rotationZ } = calculateGlobeRotation(lat, lon, globeRadius);
+      const rotationEuler = new THREE.Euler(rotationX, rotationY, rotationZ, 'YXZ');
+      const rotationQuat = new THREE.Quaternion().setFromEuler(rotationEuler);
+      const targetDir = latLonToVector3(lat, lon, globeRadius).normalize();
+      const rotated = targetDir.clone().applyQuaternion(rotationQuat);
 
-      // At equator and prime meridian, the point is already at (2, 0, 0)
-      // which needs rotation to face the camera at +Z
-      expect(rotationX).toBeCloseTo(0, 5);
-      expect(Math.abs(rotationY)).toBeCloseTo(Math.PI / 2, 5);
+      expect(rotated.x).toBeCloseTo(0, 5);
+      expect(rotated.y).toBeCloseTo(0, 5);
+      expect(rotated.z).toBeCloseTo(1, 5);
+    };
+
+    it('should calculate rotation to show equator prime meridian (0, 0)', () => {
+      expectRotatesToCamera(0, 0);
     });
 
     it('should calculate rotation to show north pole (90, 0)', () => {
-      const { rotationX, rotationY } = calculateGlobeRotation(90, 0, globeRadius);
-
-      // North pole is at (0, 2, 0) - needs positive X rotation to tilt up and bring to front
-      expect(rotationX).toBeCloseTo(Math.PI / 2, 5);
-      // Y rotation can vary depending on longitude handling at poles
-      expect(rotationY).toBeDefined();
+      expectRotatesToCamera(90, 0);
     });
 
     it('should calculate rotation to show south pole (-90, 0)', () => {
-      const { rotationX, rotationY } = calculateGlobeRotation(-90, 0, globeRadius);
-
-      // South pole is at (0, -2, 0) - needs negative X rotation to tilt down and bring to front
-      expect(rotationX).toBeCloseTo(-Math.PI / 2, 5);
-      expect(Math.abs(rotationY)).toBeCloseTo(Math.PI / 2, 5);
+      expectRotatesToCamera(-90, 0);
     });
 
     it('should calculate rotation for positive longitude (Paris: 48.8566, 2.3522)', () => {
-      const { rotationX, rotationY } = calculateGlobeRotation(48.8566, 2.3522, globeRadius);
-
-      // Verify rotations are defined and within valid range
-      expect(rotationX).toBeDefined();
-      expect(rotationY).toBeDefined();
-      expect(rotationX).toBeGreaterThanOrEqual(-Math.PI / 2);
-      expect(rotationX).toBeLessThanOrEqual(Math.PI / 2);
+      expectRotatesToCamera(48.8566, 2.3522);
     });
 
     it('should calculate rotation for negative longitude (New York: 40.7128, -74.006)', () => {
-      const { rotationX, rotationY } = calculateGlobeRotation(40.7128, -74.006, globeRadius);
-
-      // Verify rotations are defined and within valid range
-      expect(rotationX).toBeDefined();
-      expect(rotationY).toBeDefined();
-      expect(rotationX).toBeGreaterThanOrEqual(-Math.PI / 2);
-      expect(rotationX).toBeLessThanOrEqual(Math.PI / 2);
+      expectRotatesToCamera(40.7128, -74.006);
     });
 
     it('should calculate rotation for southern hemisphere (Sydney: -33.8688, 151.2093)', () => {
-      const { rotationX, rotationY } = calculateGlobeRotation(-33.8688, 151.2093, globeRadius);
-
-      // Sydney is in southern hemisphere, so X rotation should be negative (tilt down)
-      expect(rotationX).toBeLessThan(0);
-      expect(rotationY).toBeDefined();
+      expectRotatesToCamera(-33.8688, 151.2093);
     });
 
     it('should return rotation values in radians', () => {
-      const { rotationX, rotationY } = calculateGlobeRotation(45, 90, globeRadius);
+      const { rotationX, rotationY, rotationZ } = calculateGlobeRotation(45, 90, globeRadius);
 
-      // Rotations should be in range of -π to π
       expect(rotationX).toBeGreaterThanOrEqual(-Math.PI);
       expect(rotationX).toBeLessThanOrEqual(Math.PI);
       expect(rotationY).toBeGreaterThanOrEqual(-Math.PI);
       expect(rotationY).toBeLessThanOrEqual(Math.PI);
+      expect(rotationZ).toBeGreaterThanOrEqual(-Math.PI);
+      expect(rotationZ).toBeLessThanOrEqual(Math.PI);
     });
 
     it('should handle longitude at 180 degrees', () => {
-      const { rotationX, rotationY } = calculateGlobeRotation(0, 180, globeRadius);
-
-      // At 180 degrees longitude, verify valid rotation
-      expect(rotationX).toBeCloseTo(0, 5);
-      expect(Math.abs(rotationY)).toBeGreaterThan(0);
+      expectRotatesToCamera(0, 180);
     });
 
     it('should produce opposite Y rotations for opposite longitudes at equator', () => {
       const rotation1 = calculateGlobeRotation(0, 45, globeRadius);
       const rotation2 = calculateGlobeRotation(0, -45, globeRadius);
 
-      // At equator with opposite longitudes, Y rotations should be different
-      // but X rotation should be the same (both at equator)
       expect(rotation1.rotationX).toBeCloseTo(rotation2.rotationX, 5);
-      // The signs might not be strictly opposite due to atan2 wrapping,
-      // but they should be different values
       expect(rotation1.rotationY).not.toBeCloseTo(rotation2.rotationY, 5);
     });
 
-    it('should calculate correct rotation for a location directly in front of camera (lon=0, lat=0 after adjustment)', () => {
-      // Test with longitude 90 which should place location at positive Z when rotated
-      const { rotationX, rotationY } = calculateGlobeRotation(0, 90, globeRadius);
+    it('should calculate correct rotation for a location directly in front of camera (lon=90, lat=0)', () => {
+      expectRotatesToCamera(0, 90);
+    });
+  });
 
-      expect(rotationX).toBeCloseTo(0, 5);
-      expect(rotationY).toBeDefined();
+  describe('calculateGlobeQuaternion', () => {
+    const globeRadius = 2;
+
+    const expectQuaternionRotatesToCamera = (lat: number, lon: number) => {
+      const rotationQuat = calculateGlobeQuaternion(lat, lon, globeRadius);
+      const targetDir = latLonToVector3(lat, lon, globeRadius).normalize();
+      const rotated = targetDir.clone().applyQuaternion(rotationQuat);
+
+      expect(rotated.x).toBeCloseTo(0, 5);
+      expect(rotated.y).toBeCloseTo(0, 5);
+      expect(rotated.z).toBeCloseTo(1, 5);
+    };
+
+    it('should align equator prime meridian', () => {
+      expectQuaternionRotatesToCamera(0, 0);
+    });
+
+    it('should align north pole', () => {
+      expectQuaternionRotatesToCamera(90, 0);
+    });
+
+    it('should align southern hemisphere', () => {
+      expectQuaternionRotatesToCamera(-33.8688, 151.2093);
     });
   });
 });
