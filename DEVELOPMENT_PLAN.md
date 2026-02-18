@@ -34,14 +34,15 @@ A web-based survival backpacking game featuring:
 - **Phase 9**: Save/Load system with auto-save, manual save/load, multiple slots, 23 new tests
 - **Phase 10**: Production deployment to Vercel with CI/CD
 
-**Current Phase**: ✅ Phase 10 Complete (Production Deployment)
+**Current Phase**: 🚧 Phase 11 In Progress (Travel Experience)
 **Production URL**: https://dontgopeoplearecrazy.vercel.app
 
 🎉 **Status:**
 
-- All planned phases complete
+- Original 10 phases complete
 - 148 tests passing
 - Live in production
+- Phase 11 travel experience improvements in progress
 
 ## Development Phases
 
@@ -574,6 +575,60 @@ A web-based survival backpacking game featuring:
 
 ---
 
+### Phase 11: Travel Experience 🚧 IN PROGRESS
+
+**Goal**: Make travel feel meaningful, immersive, and reactive — not just a resource drain.
+
+**Key Problems to Solve:**
+- Travel currently has no visual feedback or sense of journey
+- Random events are sparse and disconnected from location/context
+- No narrative weight to decisions (where you go, when you go)
+
+**Planned Improvements:**
+- [ ] Animated globe camera pan when travelling to destination
+- [ ] Travel progress indicator (days elapsed, resources depleting in real time)
+- [ ] Location-aware events (events filtered by city/region)
+- [ ] Richer event outcomes (item rewards, stat bonuses, story fragments)
+- [ ] Weather/season modifiers on travel costs
+- [ ] Danger zone warnings before confirming travel
+
+**In Progress (branch: `travel-experience`):**
+- ✅ Globe rotation quaternion (`calculateGlobeQuaternion`) to face current location on load
+- ✅ `CountryBordersOverlay` with auto-show at `camera.z <= 3` zoom level
+- ✅ Debug compass overlay (toggleable in `game/page.tsx`)
+- ✅ Connection lines between reachable cities (`ConnectionLines` component)
+- ✅ `LocationMarker` dynamic scale based on camera distance
+- ✅ E2E tests (Playwright) for login and unauthenticated redirect
+
+**Estimated effort**: ~4–6 hours
+
+---
+
+### Phase 12: Auth Flow Improvements 📋 PLANNED
+
+**Goal**: Eliminate the auth flash and make the authentication experience seamless and robust.
+
+**Key Problems to Solve:**
+- Protected pages (`/game`, `/menu`) briefly render unauthenticated before the client-side `supabase.auth.getUser()` redirect fires — visible as a flash of content
+- No loading skeleton shown during auth check, so the UI jumps
+- Auth state is checked independently in each page — no shared auth context
+
+**Planned Improvements:**
+- [ ] Add Next.js middleware (`src/middleware.ts`) using `@supabase/ssr` server client to redirect unauthenticated users before the page renders
+- [ ] Create a shared `AuthProvider` / `useAuth` hook to avoid duplicating `supabase.auth.getUser()` in every page
+- [ ] Add a full-screen loading skeleton/spinner during auth check so there is no content flash
+- [ ] Ensure `supabase/ssr` cookie handling is correct for both middleware and client components
+- [ ] Update E2E tests to cover the no-flash behaviour
+
+**Technical Notes:**
+- Middleware requires `createServerClient` from `@supabase/ssr` (not the browser client in `src/lib/supabase.ts`)
+- Cookie reading/writing in middleware needs `request.cookies` and `response.cookies` — see [Supabase SSR docs](https://supabase.com/docs/guides/auth/server-side/nextjs)
+- Keep the existing browser client (`createBrowserClient`) for client component Supabase calls — only the auth check in middleware switches to server client
+
+**Estimated effort**: ~2–3 hours
+
+---
+
 ## Notes
 
 - Previous Unity prototype preserved in git history
@@ -584,7 +639,7 @@ A web-based survival backpacking game featuring:
 
 ---
 
-**Last Updated**: February 14, 2026  
-**Current Phase**: ✅ Phase 10 Complete (Production Deployment)  
+**Last Updated**: February 18, 2026  
+**Current Phase**: 🚧 Phase 11 In Progress (Travel Experience)  
 **Production URL**: https://dontgopeoplearecrazy.vercel.app  
-**Status**: 10 of 10 phases complete, 148 tests passing, live in production
+**Status**: 10 of 10 original phases complete, 148 tests passing, live in production
