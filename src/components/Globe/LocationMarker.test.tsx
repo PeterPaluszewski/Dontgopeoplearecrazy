@@ -49,8 +49,8 @@ describe('LocationMarker', () => {
     connectedLocationIds: ['2', '3'],
   };
 
-  let mockOnClick: ReturnType<typeof vi.fn>;
-  let mockOnHover: ReturnType<typeof vi.fn>;
+  let mockOnClick: () => void;
+  let mockOnHover: (hovered: boolean) => void;
 
   beforeEach(() => {
     mockOnClick = vi.fn();

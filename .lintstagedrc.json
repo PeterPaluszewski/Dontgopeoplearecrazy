@@ -1,5 +1,5 @@
 {
   "*.{ts,tsx,js,jsx}": ["eslint --fix", "prettier --write"],
   "*.{json,css,md}": ["prettier --write"],
-  "*.test.{ts,tsx}": ["npm run test:coverage -- --run"]
+  "*.test.{ts,tsx}": ["npm run test -- --run"]
 }

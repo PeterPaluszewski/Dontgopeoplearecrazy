@@ -161,7 +161,7 @@ describe('Globe', () => {
       />
     );
 
-    expect(screen.getByText(/Drag to rohkhkjtate/i)).toBeInTheDocument();
+    expect(screen.getByText(/Drag to rotate/i)).toBeInTheDocument();
     expect(screen.getByText(/Scroll to zoom/i)).toBeInTheDocument();
     expect(screen.getByText(/Click markers to select location/i)).toBeInTheDocument();
   });
