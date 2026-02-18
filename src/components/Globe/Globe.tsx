@@ -1,7 +1,7 @@
 'use client';
 
 import { getCompassLabel, getHeadingDegreesFromVector } from '@/lib/compass-utils';
-import { calculateGlobeQuaternion } from '@/lib/globe-utils';
+import { calculateDragRadiansPerPixel, calculateGlobeQuaternion } from '@/lib/globe-utils';
 import type { Location } from '@/types/game';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
@@ -47,6 +47,9 @@ export default function Globe({
   // Derived target quaternion for smooth rotation — recomputed when location changes
   const targetQuaternion = useRef<THREE.Quaternion | null>(null);
   const isAnimating = useRef(false);
+  const cameraDistance = useRef(6); // tracks live camera z-distance for drag scaling
+  const cameraFov = useRef(75);      // tracks live camera FOV (degrees)
+  const viewportHeight = useRef(600); // tracks canvas pixel height
 
   useEffect(() => {
     if (!currentLocationId || locations.length === 0) return;
@@ -66,7 +69,12 @@ export default function Globe({
     const upVectorRef = useRef(new THREE.Vector3());
     const lastZoomRef = useRef<boolean | null>(null);
 
-    useFrame(({ clock }, delta) => {
+    useFrame(({ clock, camera, size }, delta) => {
+      // Keep camera state in sync for surface-locked drag calculation
+      cameraDistance.current = camera.position.length();
+      cameraFov.current = (camera as THREE.PerspectiveCamera).fov ?? 75;
+      viewportHeight.current = size.height;
+
       // Smooth rotation animation toward target quaternion
       if (isAnimating.current && targetQuaternion.current && groupRef.current) {
         groupRef.current.quaternion.slerp(targetQuaternion.current, Math.min(1, delta * 3));
@@ -139,9 +147,14 @@ export default function Globe({
     dragState.current.lastX = event.clientX;
     dragState.current.lastY = event.clientY;
 
-    const rotationSpeed = 0.005;
-    groupRef.current.rotation.y += deltaX * rotationSpeed;
-    groupRef.current.rotation.x += deltaY * rotationSpeed;
+    // Surface-locked drag: see calculateDragRadiansPerPixel in globe-utils.ts
+    const radiansPerPixel = calculateDragRadiansPerPixel(
+      cameraFov.current,
+      viewportHeight.current,
+      cameraDistance.current
+    );
+    groupRef.current.rotation.y += deltaX * radiansPerPixel;
+    groupRef.current.rotation.x += deltaY * radiansPerPixel;
 
     const maxTilt = Math.PI / 2;
     groupRef.current.rotation.x = Math.max(

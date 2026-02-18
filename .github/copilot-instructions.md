@@ -77,6 +77,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 
 ## Project-Specific Patterns
 - **`'use client'` directive** required on any component using Three.js hooks (`useFrame`, `useThree`) or browser APIs.
+- **Logic belongs in `src/lib/`, not in `.tsx` files.** Any non-React logic (calculations, transforms, formatters, predicates) must live in a `src/lib/*.ts` util file and be exported as a pure function — not inlined inside a component or hook. This keeps it immediately testable without rendering. Example: `calculateDragRadiansPerPixel` in `globe-utils.ts` rather than inside `Globe.tsx`. Only `useEffect`, `useFrame`, event handlers, and JSX belong in component files.
 - **Travel cost formula**: `cost = ceil(baseCost * travelDays * (1 + (difficulty - 1) * 0.25))` — base food: 15, water: 20, energy: 25 per day. See `src/lib/travel-utils.ts`.
 - **Random events**: 30% trigger probability during travel via `triggerRandomEvent(0.3)` in `src/lib/events.ts`. `GameEvent` in `src/lib/events.ts` uses snake_case fields (raw DB shape); `GameEvent` in `src/types/game.ts` uses camelCase — these are two different types.
 - **`src/lib/utils.ts`** — contains the `cn()` helper (clsx + tailwind-merge) for conditional class names.

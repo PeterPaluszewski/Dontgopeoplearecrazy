@@ -102,3 +102,23 @@ export function calculateGlobeQuaternion(
   const cameraDir = new THREE.Vector3(0, 0, 1);
   return new THREE.Quaternion().setFromUnitVectors(targetDir, cameraDir);
 }
+
+/**
+ * Calculate how many radians to rotate the globe per pixel of drag movement.
+ * Uses a surface-locked formula: base rate from FOV + linear scale with camera distance
+ * so dragging feels natural at any zoom level.
+ * @param fovDegrees Camera vertical field of view in degrees
+ * @param viewportHeightPx Canvas height in pixels
+ * @param cameraDistance Camera distance from globe centre
+ * @param calibrationDistance Distance at which the feel was tuned (default 4)
+ */
+export function calculateDragRadiansPerPixel(
+  fovDegrees: number,
+  viewportHeightPx: number,
+  cameraDistance: number,
+  calibrationDistance: number = 4
+): number {
+  const halfFovRad = (fovDegrees * Math.PI) / 360;
+  const baseRadiansPerPixel = (2 * Math.tan(halfFovRad)) / viewportHeightPx;
+  return baseRadiansPerPixel * (cameraDistance / calibrationDistance);
+}
