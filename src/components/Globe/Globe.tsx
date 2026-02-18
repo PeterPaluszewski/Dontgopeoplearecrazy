@@ -48,7 +48,7 @@ export default function Globe({
   const targetQuaternion = useRef<THREE.Quaternion | null>(null);
   const isAnimating = useRef(false);
   const cameraDistance = useRef(6); // tracks live camera z-distance for drag scaling
-  const cameraFov = useRef(75);      // tracks live camera FOV (degrees)
+  const cameraFov = useRef(75); // tracks live camera FOV (degrees)
   const viewportHeight = useRef(600); // tracks canvas pixel height
 
   useEffect(() => {
@@ -185,7 +185,7 @@ export default function Globe({
           <directionalLight position={[5, 5, 5]} intensity={1} />
           <pointLight position={[-5, -5, -5]} intensity={0.5} />
 
-          {/* Globe and Markers - grouped together so they rotate as one */}
+          {/* Globe — sphere, connections, borders and markers grouped so they rotate together */}
           <group ref={groupRef}>
             <GlobeSphere />
             <ConnectionLines locations={locations} globeRadius={2} />

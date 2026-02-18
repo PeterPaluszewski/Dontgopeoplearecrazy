@@ -15,7 +15,7 @@ vi.mock('three', async () => {
 
 // Mock react-three/fiber
 vi.mock('@react-three/fiber', () => ({
-  useFrame: vi.fn((callback) => {
+  useFrame: vi.fn(() => {
     // Don't execute the animation callback in tests
   }),
   useThree: () => ({
