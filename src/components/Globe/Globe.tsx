@@ -44,20 +44,20 @@ export default function Globe({
   const dragState = useRef({ isDragging: false, lastX: 0, lastY: 0 });
   const [showBorders, setShowBorders] = useState(false);
 
-  // Rotate globe to show current location on load
-  useEffect(() => {
-    if (currentLocationId && locations.length > 0 && groupRef.current?.rotation) {
-      const currentLocation = locations.find(loc => loc.id === currentLocationId);
-      if (currentLocation) {
-        const rotationQuat = calculateGlobeQuaternion(
-          currentLocation.latitude,
-          currentLocation.longitude,
-          2 // globe radius
-        );
+  // Derived target quaternion for smooth rotation — recomputed when location changes
+  const targetQuaternion = useRef<THREE.Quaternion | null>(null);
+  const isAnimating = useRef(false);
 
-        groupRef.current.quaternion.copy(rotationQuat);
-      }
-    }
+  useEffect(() => {
+    if (!currentLocationId || locations.length === 0) return;
+    const currentLocation = locations.find((loc) => loc.id === currentLocationId);
+    if (!currentLocation) return;
+    targetQuaternion.current = calculateGlobeQuaternion(
+      currentLocation.latitude,
+      currentLocation.longitude,
+      2
+    );
+    isAnimating.current = true;
   }, [currentLocationId, locations]);
 
   const DebugProbe = ({ onUpdate }: { onUpdate?: (debug: GlobeDebugInfo) => void }) => {
@@ -66,7 +66,17 @@ export default function Globe({
     const upVectorRef = useRef(new THREE.Vector3());
     const lastZoomRef = useRef<boolean | null>(null);
 
-    useFrame(({ clock }) => {
+    useFrame(({ clock }, delta) => {
+      // Smooth rotation animation toward target quaternion
+      if (isAnimating.current && targetQuaternion.current && groupRef.current) {
+        groupRef.current.quaternion.slerp(targetQuaternion.current, Math.min(1, delta * 3));
+        const angle = groupRef.current.quaternion.angleTo(targetQuaternion.current);
+        if (angle < 0.001) {
+          groupRef.current.quaternion.copy(targetQuaternion.current);
+          isAnimating.current = false;
+        }
+      }
+
       const zoomedIn = camera.position.z <= 3;
       if (lastZoomRef.current !== zoomedIn) {
         lastZoomRef.current = zoomedIn;
@@ -112,6 +122,8 @@ export default function Globe({
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    // Cancel any in-progress rotation animation when the user grabs the globe
+    isAnimating.current = false;
     dragState.current = {
       isDragging: true,
       lastX: event.clientX,
