@@ -10,7 +10,7 @@ const locations: Location[] = [
     latitude: 48.8566,
     longitude: 2.3522,
     difficultyMultiplier: 1,
-    travelDays: 0,
+    isCoastal: false,
     connectedLocationIds: [],
   },
   {
@@ -20,7 +20,7 @@ const locations: Location[] = [
     latitude: 51.5074,
     longitude: -0.1278,
     difficultyMultiplier: 1,
-    travelDays: 1,
+    isCoastal: false,
     connectedLocationIds: [],
   },
 ];

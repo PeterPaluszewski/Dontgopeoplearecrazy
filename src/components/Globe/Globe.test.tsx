@@ -57,7 +57,7 @@ describe('Globe', () => {
       latitude: 48.8566,
       longitude: 2.3522,
       difficultyMultiplier: 1,
-      travelDays: 0,
+      isCoastal: false,
       connectedLocationIds: ['2', '3'],
     },
     {
@@ -67,7 +67,7 @@ describe('Globe', () => {
       latitude: 51.5074,
       longitude: -0.1278,
       difficultyMultiplier: 1,
-      travelDays: 1,
+      isCoastal: false,
       connectedLocationIds: ['1'],
     },
     {
@@ -77,7 +77,7 @@ describe('Globe', () => {
       latitude: 52.52,
       longitude: 13.405,
       difficultyMultiplier: 2,
-      travelDays: 2,
+      isCoastal: false,
       connectedLocationIds: ['1'],
     },
   ];

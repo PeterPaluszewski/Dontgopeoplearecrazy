@@ -1,4 +1,11 @@
-import type { GameEvent, GameState, Item, Location, LocationConnection } from '@/types/game';
+import type {
+  GameEvent,
+  GameState,
+  Item,
+  Location,
+  LocationConnection,
+  TransportType,
+} from '@/types/game';
 import { createClient } from './supabase';
 
 // ============================================
@@ -56,7 +63,7 @@ export async function getAllLocations(): Promise<Location[]> {
     latitude: loc.latitude,
     longitude: loc.longitude,
     difficultyMultiplier: loc.difficulty_multiplier,
-    travelDays: loc.travel_days,
+    isCoastal: loc.is_coastal ?? false,
     connectedLocationIds: connectionMap.get(loc.id) ?? [],
   }));
 }
@@ -95,7 +102,7 @@ export async function getLocationById(id: string): Promise<Location | null> {
     latitude: data.latitude,
     longitude: data.longitude,
     difficultyMultiplier: data.difficulty_multiplier,
-    travelDays: data.travel_days,
+    isCoastal: data.is_coastal ?? false,
     connectedLocationIds,
   };
 }
@@ -120,10 +127,29 @@ export async function getConnectionsForLocation(locationId: string): Promise<Loc
     id: row.id,
     fromId: row.from_id,
     toId: row.to_id,
-    transportType: row.transport_type ?? 'any',
     distanceKm: row.distance_km ?? null,
     difficultyModifier: row.difficulty_modifier ?? 1.0,
     isBidirectional: row.is_bidirectional ?? true,
+  }));
+}
+
+export async function getTransportTypes(): Promise<TransportType[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase.from('transport_types').select('*').order('speed_kmh');
+
+  if (error) {
+    console.error('Error fetching transport types:', error);
+    throw error;
+  }
+
+  return (data || []).map((row) => ({
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    speedKmh: row.speed_kmh,
+    baseCostMultiplier: row.base_cost_multiplier,
+    requiresItemSlug: row.requires_item_slug ?? null,
+    requiresCoastal: row.requires_coastal ?? false,
   }));
 }
 

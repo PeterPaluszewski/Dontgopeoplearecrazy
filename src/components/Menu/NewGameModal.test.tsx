@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import NewGameModal from './NewGameModal';
 import * as database from '@/lib/database';
 import * as saveLoad from '@/lib/save-load';
-import { useRouter } from 'next/navigation';
 import { useGameStore } from '@/store/gameStore';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { useRouter } from 'next/navigation';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import NewGameModal from './NewGameModal';
 
 // Mock dependencies
 vi.mock('next/navigation', () => ({
@@ -46,7 +46,7 @@ describe('NewGameModal', () => {
       latitude: 48.8566,
       longitude: 2.3522,
       difficultyMultiplier: 1.0,
-      travelDays: 0,
+      isCoastal: false,
       connectedLocationIds: [],
     },
     {
@@ -56,7 +56,7 @@ describe('NewGameModal', () => {
       latitude: 52.52,
       longitude: 13.405,
       difficultyMultiplier: 1.0,
-      travelDays: 0,
+      isCoastal: false,
       connectedLocationIds: [],
     },
     {
@@ -66,7 +66,7 @@ describe('NewGameModal', () => {
       latitude: 52.3676,
       longitude: 4.9041,
       difficultyMultiplier: 1.0,
-      travelDays: 0,
+      isCoastal: false,
       connectedLocationIds: [],
     },
   ];
@@ -85,7 +85,7 @@ describe('NewGameModal', () => {
 
   it('should render modal when isOpen is true', async () => {
     render(<NewGameModal isOpen={true} onClose={vi.fn()} />);
-    
+
     await waitFor(() => {
       expect(screen.getByText('New Game')).toBeInTheDocument();
     });
@@ -128,8 +128,12 @@ describe('NewGameModal', () => {
       expect(screen.getByText('Hard')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('More resources, lower travel costs, fewer dangers')).toBeInTheDocument();
-    expect(screen.getByText('Balanced experience, recommended for first playthrough')).toBeInTheDocument();
+    expect(
+      screen.getByText('More resources, lower travel costs, fewer dangers')
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Balanced experience, recommended for first playthrough')
+    ).toBeInTheDocument();
     expect(screen.getByText('Scarce resources, high costs, frequent dangers')).toBeInTheDocument();
   });
 
@@ -198,7 +202,10 @@ describe('NewGameModal', () => {
 
   it('should create new game with correct parameters', async () => {
     const user = userEvent.setup();
-    vi.mocked(saveLoad.createNewGame).mockResolvedValue({ success: true, gameStateId: 'test-game-id' });
+    vi.mocked(saveLoad.createNewGame).mockResolvedValue({
+      success: true,
+      gameStateId: 'test-game-id',
+    });
 
     render(<NewGameModal isOpen={true} onClose={vi.fn()} />);
 
@@ -229,7 +236,10 @@ describe('NewGameModal', () => {
 
   it('should handle createNewGame without character name', async () => {
     const user = userEvent.setup();
-    vi.mocked(saveLoad.createNewGame).mockResolvedValue({ success: true, gameStateId: 'test-game-id' });
+    vi.mocked(saveLoad.createNewGame).mockResolvedValue({
+      success: true,
+      gameStateId: 'test-game-id',
+    });
 
     render(<NewGameModal isOpen={true} onClose={vi.fn()} />);
 
@@ -247,7 +257,10 @@ describe('NewGameModal', () => {
 
   it('should navigate to game page on success', async () => {
     const user = userEvent.setup();
-    vi.mocked(saveLoad.createNewGame).mockResolvedValue({ success: true, gameStateId: 'test-game-id' });
+    vi.mocked(saveLoad.createNewGame).mockResolvedValue({
+      success: true,
+      gameStateId: 'test-game-id',
+    });
 
     render(<NewGameModal isOpen={true} onClose={vi.fn()} />);
 
@@ -267,9 +280,9 @@ describe('NewGameModal', () => {
   it('should show error message on failure', async () => {
     const user = userEvent.setup();
     const toast = await import('react-hot-toast');
-    vi.mocked(saveLoad.createNewGame).mockResolvedValue({ 
-      success: false, 
-      error: 'Database error' 
+    vi.mocked(saveLoad.createNewGame).mockResolvedValue({
+      success: false,
+      error: 'Database error',
     });
 
     render(<NewGameModal isOpen={true} onClose={vi.fn()} />);
@@ -359,7 +372,10 @@ describe('NewGameModal', () => {
   it('should disable buttons while creating game', async () => {
     const user = userEvent.setup();
     vi.mocked(saveLoad.createNewGame).mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve({ success: true, gameStateId: 'test' }), 100))
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve({ success: true, gameStateId: 'test' }), 100)
+        )
     );
 
     render(<NewGameModal isOpen={true} onClose={vi.fn()} />);
@@ -386,7 +402,7 @@ describe('NewGameModal', () => {
         latitude: 35.6762,
         longitude: 139.6503,
         difficultyMultiplier: 1.0,
-        travelDays: 0,
+        isCoastal: false,
         connectedLocationIds: [],
       },
     ]);

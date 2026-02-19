@@ -45,7 +45,7 @@ describe('LocationMarker', () => {
     latitude: 48.8566,
     longitude: 2.3522,
     difficultyMultiplier: 1,
-    travelDays: 0,
+    isCoastal: false,
     connectedLocationIds: ['2', '3'],
   };
 

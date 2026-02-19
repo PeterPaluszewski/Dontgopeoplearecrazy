@@ -20,22 +20,19 @@ export default function LoadGameModal({ isOpen, onClose }: LoadGameModalProps) {
   const router = useRouter();
   const loadGameState = useGameStore((state) => state.loadGameState);
 
-  const fetchSaves = async () => {
-    setIsLoading(true);
-    const result = await loadAllSaves();
-    
-    if (result.success && result.saves) {
-      setSaves(result.saves);
-    } else {
-      toast.error('Failed to load saves');
-    }
-    setIsLoading(false);
-  };
-
   useEffect(() => {
-    if (isOpen) {
-      fetchSaves();
-    }
+    if (!isOpen) return;
+    const fetchSaves = async () => {
+      setIsLoading(true);
+      const result = await loadAllSaves();
+      if (result.success && result.saves) {
+        setSaves(result.saves);
+      } else {
+        toast.error('Failed to load saves');
+      }
+      setIsLoading(false);
+    };
+    fetchSaves();
   }, [isOpen]);
 
   const handleLoadGame = (save: GameState) => {
@@ -46,7 +43,7 @@ export default function LoadGameModal({ isOpen, onClose }: LoadGameModalProps) {
 
   const handleDeleteSave = async (saveId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (!confirm('Are you sure you want to delete this save?')) {
       return;
     }
@@ -88,10 +85,7 @@ export default function LoadGameModal({ isOpen, onClose }: LoadGameModalProps) {
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-2xl font-bold text-white">Load Game</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 transition-colors hover:text-white"
-          >
+          <button onClick={onClose} className="text-gray-400 transition-colors hover:text-white">
             <span className="text-2xl">×</span>
           </button>
         </div>
@@ -130,9 +124,7 @@ export default function LoadGameModal({ isOpen, onClose }: LoadGameModalProps) {
 
                 {/* Character Name */}
                 {save.characterName && (
-                  <div className="mb-2 text-lg font-semibold text-white">
-                    {save.characterName}
-                  </div>
+                  <div className="mb-2 text-lg font-semibold text-white">{save.characterName}</div>
                 )}
 
                 {/* Location */}
@@ -144,29 +136,22 @@ export default function LoadGameModal({ isOpen, onClose }: LoadGameModalProps) {
                 <div className="mb-3 flex gap-4 text-sm">
                   <div>
                     <span className="text-gray-400">Food:</span>{' '}
-                    <span className={getResourceColor(save.food)}>
-                      {save.food}%
-                    </span>
+                    <span className={getResourceColor(save.food)}>{save.food}%</span>
                   </div>
                   <div>
                     <span className="text-gray-400">Water:</span>{' '}
-                    <span className={getResourceColor(save.water)}>
-                      {save.water}%
-                    </span>
+                    <span className={getResourceColor(save.water)}>{save.water}%</span>
                   </div>
                   <div>
                     <span className="text-gray-400">Energy:</span>{' '}
-                    <span className={getResourceColor(save.energy)}>
-                      {save.energy}%
-                    </span>
+                    <span className={getResourceColor(save.energy)}>{save.energy}%</span>
                   </div>
                 </div>
 
                 {/* Difficulty */}
                 {save.difficulty && (
                   <div className="mb-2 text-xs text-gray-400">
-                    Difficulty:{' '}
-                    <span className="capitalize">{save.difficulty}</span>
+                    Difficulty: <span className="capitalize">{save.difficulty}</span>
                   </div>
                 )}
 

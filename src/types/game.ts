@@ -1,11 +1,30 @@
+export interface TransportType {
+  id: string;
+  slug: string;
+  name: string;
+  speedKmh: number;
+  baseCostMultiplier: number;
+  requiresItemSlug: string | null;
+  requiresCoastal: boolean;
+}
+
+export interface ConnectionTransportType {
+  id: string;
+  connectionId: string;
+  transportTypeId: string;
+  transportType?: TransportType;
+  isForward: boolean;
+  costMultiplierOverride: number | null;
+}
+
 export interface LocationConnection {
   id: string;
   fromId: string;
   toId: string;
-  transportType: string;
   distanceKm: number | null;
   difficultyModifier: number;
   isBidirectional: boolean;
+  transportOptions?: ConnectionTransportType[];
 }
 
 export interface Location {
@@ -15,7 +34,7 @@ export interface Location {
   latitude: number;
   longitude: number;
   difficultyMultiplier: number;
-  travelDays: number;
+  isCoastal: boolean;
   /** IDs of directly reachable locations — assembled from the location_connections table */
   connectedLocationIds: string[];
 }

@@ -17,7 +17,7 @@ describe('LocationInfo', () => {
     latitude: 48.8566,
     longitude: 2.3522,
     difficultyMultiplier: 3,
-    travelDays: 2,
+    isCoastal: false,
     connectedLocationIds: ['2', '3', '4'],
   };
 
@@ -91,29 +91,29 @@ describe('LocationInfo', () => {
     expect(stars).toBeInTheDocument();
   });
 
-  it('should display travel time correctly', () => {
-    vi.mocked(useGameStore).mockReturnValue({
-      visitedLocationIds: [],
-    } as ReturnType<typeof useGameStore>);
-
-    render(<LocationInfo location={mockLocation} />);
-
-    expect(screen.getByText('2 days')).toBeInTheDocument();
-  });
-
-  it('should display singular day for 1 travel day', () => {
-    const oneDayLocation: Location = {
+  it('should display coastal status for coastal location', () => {
+    const coastalLocation: Location = {
       ...mockLocation,
-      travelDays: 1,
+      isCoastal: true,
     };
 
     vi.mocked(useGameStore).mockReturnValue({
       visitedLocationIds: [],
     } as ReturnType<typeof useGameStore>);
 
-    render(<LocationInfo location={oneDayLocation} />);
+    render(<LocationInfo location={coastalLocation} />);
 
-    expect(screen.getByText('1 day')).toBeInTheDocument();
+    expect(screen.getByText('Coastal')).toBeInTheDocument();
+  });
+
+  it('should display inland status for non-coastal location', () => {
+    vi.mocked(useGameStore).mockReturnValue({
+      visitedLocationIds: [],
+    } as ReturnType<typeof useGameStore>);
+
+    render(<LocationInfo location={mockLocation} />);
+
+    expect(screen.getByText('Inland')).toBeInTheDocument();
   });
 
   it('should display coordinates with 2 decimal places', () => {

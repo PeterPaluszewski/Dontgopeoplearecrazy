@@ -3,7 +3,7 @@
 import { calculateTravelCost, canAffordTravel } from '@/lib/travel-utils';
 import { useGameStore } from '@/store/gameStore';
 import { Location } from '@/types/game';
-import { AlertTriangle, ChevronRight, Clock, MapPin, X } from 'lucide-react';
+import { AlertTriangle, ChevronRight, MapPin, X } from 'lucide-react';
 
 interface TravelModalProps {
   destination: Location;
@@ -47,7 +47,7 @@ export default function TravelModal({ destination, isOpen, onClose, onConfirm }:
 
   if (!isOpen) return null;
 
-  const cost = calculateTravelCost(destination.travelDays, destination.difficultyMultiplier);
+  const cost = calculateTravelCost(1, destination.difficultyMultiplier);
   const canAfford = canAffordTravel({ food, water, energy }, cost);
 
   return (
@@ -76,17 +76,6 @@ export default function TravelModal({ destination, isOpen, onClose, onConfirm }:
 
         {/* Content */}
         <div className="p-4 space-y-4">
-          {/* Journey Info */}
-          <div className="flex items-center gap-4 p-3 bg-gray-700 rounded-lg">
-            <Clock className="w-5 h-5 text-blue-400" />
-            <div>
-              <div className="text-sm text-gray-400">Journey Duration</div>
-              <div className="font-medium text-white">
-                {destination.travelDays} {destination.travelDays === 1 ? 'day' : 'days'}
-              </div>
-            </div>
-          </div>
-
           {/* Resource Costs */}
           <div className="space-y-2">
             <h3 className="text-sm font-medium text-gray-300">Resource Cost:</h3>

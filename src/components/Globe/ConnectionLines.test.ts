@@ -9,7 +9,7 @@ const baseLocation: Location = {
   latitude: 0,
   longitude: 0,
   difficultyMultiplier: 1,
-  travelDays: 0,
+  isCoastal: false,
   connectedLocationIds: [],
 };
 

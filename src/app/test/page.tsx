@@ -1,8 +1,8 @@
 'use client';
 
+import { getAllItems, getAllLocations } from '@/lib/database';
+import type { Item, Location } from '@/types/game';
 import { useEffect, useState } from 'react';
-import { getAllLocations, getAllItems } from '@/lib/database';
-import type { Location, Item } from '@/types/game';
 
 export default function TestPage() {
   const [locations, setLocations] = useState<Location[]>([]);
@@ -92,7 +92,7 @@ export default function TestPage() {
                   <div className="flex gap-4 text-xs text-gray-500">
                     <span>Lat: {location.latitude}</span>
                     <span>Lng: {location.longitude}</span>
-                    <span>Days: {location.travelDays}</span>
+                    <span>Coastal: {location.isCoastal ? 'Yes' : 'No'}</span>
                   </div>
                 </div>
               ))}

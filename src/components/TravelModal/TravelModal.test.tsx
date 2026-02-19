@@ -17,7 +17,7 @@ describe('TravelModal', () => {
     latitude: 52.52,
     longitude: 13.405,
     difficultyMultiplier: 2,
-    travelDays: 3,
+    isCoastal: false,
     connectedLocationIds: ['location-1'],
   };
 
@@ -57,31 +57,6 @@ describe('TravelModal', () => {
     expect(screen.getByText('Travel to Berlin')).toBeInTheDocument();
   });
 
-  it('should display journey duration', () => {
-    render(
-      <TravelModal
-        destination={mockDestination}
-        isOpen={true}
-        onClose={mockOnClose}
-        onConfirm={mockOnConfirm}
-      />
-    );
-    expect(screen.getByText('3 days')).toBeInTheDocument();
-  });
-
-  it('should display singular day for 1 travel day', () => {
-    const singleDayDestination = { ...mockDestination, travelDays: 1 };
-    render(
-      <TravelModal
-        destination={singleDayDestination}
-        isOpen={true}
-        onClose={mockOnClose}
-        onConfirm={mockOnConfirm}
-      />
-    );
-    expect(screen.getByText('1 day')).toBeInTheDocument();
-  });
-
   it('should calculate and display resource costs', () => {
     render(
       <TravelModal
@@ -92,13 +67,13 @@ describe('TravelModal', () => {
       />
     );
 
-    // Difficulty 2 = multiplier 1.25, 3 days
-    // Food: ceil(15 * 3 * 1.25) = 57
-    // Water: ceil(20 * 3 * 1.25) = 75
-    // Energy: ceil(25 * 3 * 1.25) = 94
-    expect(screen.getByText(/75 - 57/)).toBeInTheDocument(); // Food
-    expect(screen.getByText(/80 - 75/)).toBeInTheDocument(); // Water
-    expect(screen.getByText(/85 - 94/)).toBeInTheDocument(); // Energy
+    // Difficulty 2 = multiplier 1.25, 1 day (fixed until transport system)
+    // Food: ceil(15 * 1 * 1.25) = 19
+    // Water: ceil(20 * 1 * 1.25) = 25
+    // Energy: ceil(25 * 1 * 1.25) = 32
+    expect(screen.getByText(/75 - 19/)).toBeInTheDocument(); // Food
+    expect(screen.getByText(/80 - 25/)).toBeInTheDocument(); // Water
+    expect(screen.getByText(/85 - 32/)).toBeInTheDocument(); // Energy
   });
 
   it('should show remaining resources after travel', () => {
@@ -111,15 +86,21 @@ describe('TravelModal', () => {
       />
     );
 
-    // 75 - 57 = 18
-    expect(screen.getByText('18')).toBeInTheDocument();
-    // 80 - 75 = 5
-    expect(screen.getByText('5')).toBeInTheDocument();
-    // 85 - 94 = -9
-    expect(screen.getByText('-9')).toBeInTheDocument();
+    // 75 - 19 = 56
+    expect(screen.getByText('56')).toBeInTheDocument();
+    // 80 - 25 = 55
+    expect(screen.getByText('55')).toBeInTheDocument();
+    // 85 - 32 = 53
+    expect(screen.getByText('53')).toBeInTheDocument();
   });
 
   it('should highlight insufficient resources in red', () => {
+    (useGameStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      food: 10,
+      water: 10,
+      energy: 10,
+    });
+
     render(
       <TravelModal
         destination={mockDestination}
@@ -129,13 +110,18 @@ describe('TravelModal', () => {
       />
     );
 
-    // Energy should be insufficient (needs 94, has 85)
-    // Find the parent container, not the text element
+    // Energy should be insufficient (needs 32, has 10)
     const containers = screen.getAllByText('Energy')[0].closest('div')?.parentElement;
     expect(containers).toHaveClass('bg-red-500/10');
   });
 
   it('should show warning when resources are insufficient', () => {
+    (useGameStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      food: 10,
+      water: 10,
+      energy: 10,
+    });
+
     render(
       <TravelModal
         destination={mockDestination}
@@ -172,6 +158,12 @@ describe('TravelModal', () => {
   });
 
   it('should disable Begin Journey button when resources are insufficient', () => {
+    (useGameStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      food: 10,
+      water: 10,
+      energy: 10,
+    });
+
     render(
       <TravelModal
         destination={mockDestination}
@@ -256,6 +248,12 @@ describe('TravelModal', () => {
   });
 
   it('should not call onConfirm when Begin Journey is clicked with insufficient resources', () => {
+    (useGameStore as unknown as ReturnType<typeof vi.fn>).mockReturnValue({
+      food: 10,
+      water: 10,
+      energy: 10,
+    });
+
     render(
       <TravelModal
         destination={mockDestination}

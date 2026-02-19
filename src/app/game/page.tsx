@@ -125,10 +125,7 @@ export default function GamePage() {
   const handleTravelConfirm = async () => {
     if (!travelDestination) return;
 
-    const cost = calculateTravelCost(
-      travelDestination.travelDays,
-      travelDestination.difficultyMultiplier
-    );
+    const cost = calculateTravelCost(1, travelDestination.difficultyMultiplier);
     travelToLocation(travelDestination.id, cost);
     setSelectedLocation(travelDestination);
     setTravelDestination(null);

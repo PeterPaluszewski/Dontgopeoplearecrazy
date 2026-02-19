@@ -18,14 +18,13 @@ export default function MenuPage() {
   const router = useRouter();
   const loadGameState = useGameStore((state) => state.loadGameState);
 
-  const checkForSave = async () => {
-    setIsCheckingSave(true);
-    const result = await loadGame();
-    setHasSave(result.success && result.gameState !== null);
-    setIsCheckingSave(false);
-  };
-
   useEffect(() => {
+    const checkForSave = async () => {
+      setIsCheckingSave(true);
+      const result = await loadGame();
+      setHasSave(result.success && result.gameState !== null);
+      setIsCheckingSave(false);
+    };
     checkForSave();
   }, []);
 
@@ -49,12 +48,8 @@ export default function MenuPage() {
       <div className="relative z-10 w-full max-w-md rounded-lg bg-slate-800/80 p-8 shadow-2xl backdrop-blur-sm">
         {/* Title */}
         <div className="mb-8 text-center">
-          <h1 className="mb-2 text-4xl font-bold text-white">
-            Backpacking Game
-          </h1>
-          <p className="text-sm text-gray-400">
-            Explore Europe. Survive. Adventure awaits.
-          </p>
+          <h1 className="mb-2 text-4xl font-bold text-white">Backpacking Game</h1>
+          <p className="text-sm text-gray-400">Explore Europe. Survive. Adventure awaits.</p>
         </div>
 
         {/* Menu Buttons */}
@@ -100,15 +95,11 @@ export default function MenuPage() {
 
         {/* Loading indicator */}
         {isCheckingSave && (
-          <div className="mt-4 text-center text-sm text-gray-400">
-            Checking for saved games...
-          </div>
+          <div className="mt-4 text-center text-sm text-gray-400">Checking for saved games...</div>
         )}
 
         {/* Version/Credits */}
-        <div className="mt-8 text-center text-xs text-gray-500">
-          v1.0.0 | Made with ❤️
-        </div>
+        <div className="mt-8 text-center text-xs text-gray-500">v1.0.0 | Made with ❤️</div>
       </div>
 
       {/* Modals */}
