@@ -10,6 +10,7 @@ const baseLocation: Location = {
   longitude: 0,
   difficultyMultiplier: 1,
   isCoastal: false,
+  region: 'europe_mainland',
   connectedLocationIds: [],
 };
 

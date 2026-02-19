@@ -11,6 +11,7 @@ const locations: Location[] = [
     longitude: 2.3522,
     difficultyMultiplier: 1,
     isCoastal: false,
+    region: 'europe_mainland',
     connectedLocationIds: [],
   },
   {
@@ -21,6 +22,7 @@ const locations: Location[] = [
     longitude: -0.1278,
     difficultyMultiplier: 1,
     isCoastal: false,
+    region: 'british_isles',
     connectedLocationIds: [],
   },
 ];

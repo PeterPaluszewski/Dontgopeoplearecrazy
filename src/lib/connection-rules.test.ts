@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   TRANSPORT_RULES,
-  WATER_BARRIERS,
   generateConnections,
-  isCrossWater,
   isEligible,
+  sameRegion,
   type CityInput,
   type TransportRule,
 } from './connection-rules';
@@ -19,6 +18,7 @@ const BUDAPEST: CityInput = {
   latitude: 47.4979,
   longitude: 19.0402,
   isCoastal: false,
+  region: 'europe_mainland',
 };
 const VIENNA: CityInput = {
   id: 'vie',
@@ -26,6 +26,7 @@ const VIENNA: CityInput = {
   latitude: 48.2082,
   longitude: 16.3738,
   isCoastal: false,
+  region: 'europe_mainland',
 };
 const BERLIN: CityInput = {
   id: 'ber',
@@ -33,6 +34,7 @@ const BERLIN: CityInput = {
   latitude: 52.52,
   longitude: 13.405,
   isCoastal: false,
+  region: 'europe_mainland',
 };
 const PRAGUE: CityInput = {
   id: 'prg',
@@ -40,6 +42,7 @@ const PRAGUE: CityInput = {
   latitude: 50.0755,
   longitude: 14.4378,
   isCoastal: false,
+  region: 'europe_mainland',
 };
 const AMSTERDAM: CityInput = {
   id: 'ams',
@@ -47,6 +50,7 @@ const AMSTERDAM: CityInput = {
   latitude: 52.3676,
   longitude: 4.9041,
   isCoastal: false,
+  region: 'europe_mainland',
 };
 const PARIS: CityInput = {
   id: 'par',
@@ -54,6 +58,7 @@ const PARIS: CityInput = {
   latitude: 48.8566,
   longitude: 2.3522,
   isCoastal: false,
+  region: 'europe_mainland',
 };
 const LONDON: CityInput = {
   id: 'lon',
@@ -61,6 +66,7 @@ const LONDON: CityInput = {
   latitude: 51.5074,
   longitude: -0.1278,
   isCoastal: false,
+  region: 'british_isles',
 };
 const LISBON: CityInput = {
   id: 'lis',
@@ -68,6 +74,7 @@ const LISBON: CityInput = {
   latitude: 38.7223,
   longitude: -9.1393,
   isCoastal: true,
+  region: 'europe_mainland',
 };
 const BARCELONA: CityInput = {
   id: 'bcn',
@@ -75,6 +82,7 @@ const BARCELONA: CityInput = {
   latitude: 41.3851,
   longitude: 2.1734,
   isCoastal: true,
+  region: 'europe_mainland',
 };
 
 const ALL_CITIES = [BUDAPEST, VIENNA, BERLIN, PRAGUE, AMSTERDAM, PARIS, LONDON, LISBON, BARCELONA];
@@ -141,55 +149,54 @@ describe('TRANSPORT_RULES', () => {
 });
 
 // ---------------------------------------------------------------------------
-// isCrossWater
+// sameRegion
 // ---------------------------------------------------------------------------
 
-describe('isCrossWater', () => {
-  it('returns true for London ↔ Paris (English Channel)', () => {
-    expect(isCrossWater(LONDON, PARIS, 344)).toBe(true);
-    expect(isCrossWater(PARIS, LONDON, 344)).toBe(true);
+describe('sameRegion', () => {
+  it('returns true for two cities in the same region', () => {
+    expect(sameRegion(BUDAPEST, VIENNA)).toBe(true);
+    expect(sameRegion(AMSTERDAM, PARIS)).toBe(true);
   });
 
-  it('returns true for London ↔ Amsterdam (English Channel)', () => {
-    expect(isCrossWater(LONDON, AMSTERDAM, 358)).toBe(true);
+  it('returns false for cities in different regions', () => {
+    expect(sameRegion(LONDON, PARIS)).toBe(false);
+    expect(sameRegion(LONDON, AMSTERDAM)).toBe(false);
   });
 
-  it('returns false for Budapest ↔ Vienna (overland)', () => {
-    expect(isCrossWater(BUDAPEST, VIENNA, 214)).toBe(false);
+  it('is symmetric', () => {
+    expect(sameRegion(PARIS, LONDON)).toBe(false);
+    expect(sameRegion(LONDON, PARIS)).toBe(false);
+    expect(sameRegion(PARIS, AMSTERDAM)).toBe(true);
+    expect(sameRegion(AMSTERDAM, PARIS)).toBe(true);
   });
 
-  it('returns false for Amsterdam ↔ Paris (overland via Belgium)', () => {
-    expect(isCrossWater(AMSTERDAM, PARIS, 430)).toBe(false);
-  });
-
-  it('returns false for cities not mentioned in any barrier', () => {
-    const unknown: CityInput = {
-      id: 'x',
-      name: 'Atlantis',
-      latitude: 0,
-      longitude: 0,
-      isCoastal: false,
+  it('works with arbitrary region slugs', () => {
+    const tokyo: CityInput = {
+      id: 't',
+      name: 'Tokyo',
+      latitude: 35.68,
+      longitude: 139.69,
+      isCoastal: true,
+      region: 'japan',
     };
-    expect(isCrossWater(BUDAPEST, unknown, 999)).toBe(false);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// WATER_BARRIERS completeness
-// ---------------------------------------------------------------------------
-
-describe('WATER_BARRIERS', () => {
-  it('has at least one entry for the English Channel', () => {
-    const channel = WATER_BARRIERS.find((b) => b.name === 'English Channel');
-    expect(channel).toBeDefined();
-    expect(channel!.sideA).toContain('London');
-  });
-
-  it('Atlantic Ocean barrier separates London from New York', () => {
-    const atlantic = WATER_BARRIERS.find((b) => b.name === 'Atlantic Ocean');
-    expect(atlantic).toBeDefined();
-    expect(atlantic!.sideA).toContain('London');
-    expect(atlantic!.sideB).toContain('New York');
+    const osaka: CityInput = {
+      id: 'o',
+      name: 'Osaka',
+      latitude: 34.69,
+      longitude: 135.5,
+      isCoastal: true,
+      region: 'japan',
+    };
+    const seoul: CityInput = {
+      id: 's',
+      name: 'Seoul',
+      latitude: 37.57,
+      longitude: 126.98,
+      isCoastal: false,
+      region: 'asia_mainland',
+    };
+    expect(sameRegion(tokyo, osaka)).toBe(true);
+    expect(sameRegion(tokyo, seoul)).toBe(false);
   });
 });
 
@@ -235,26 +242,32 @@ describe('isEligible', () => {
     });
   });
 
-  describe('cross-water predicate', () => {
-    it('rejects on_foot London ↔ Paris (English Channel)', () => {
+  describe('region predicate (overland transport)', () => {
+    it('rejects on_foot London ↔ Paris (different regions)', () => {
       expect(isEligible(LONDON, PARIS, 344, ruleFor('on_foot'))).toBe(false);
     });
 
-    it('rejects bicycle London ↔ Paris (English Channel)', () => {
-      expect(isEligible(LONDON, PARIS, 344, ruleFor('bicycle'))).toBe(false);
+    it('rejects bicycle London ↔ Amsterdam (different regions)', () => {
+      expect(isEligible(LONDON, AMSTERDAM, 358, ruleFor('bicycle'))).toBe(false);
     });
 
-    it('accepts on_foot Amsterdam ↔ Paris (overland)', () => {
+    it('accepts on_foot Amsterdam ↔ Paris (same region, overland)', () => {
       expect(isEligible(AMSTERDAM, PARIS, 430, ruleFor('on_foot'))).toBe(true);
     });
 
-    it('plane has no cross-water predicate — accepts London ↔ New York regardless', () => {
+    it('rejects rickshaw and tuk_tuk across regions', () => {
+      expect(isEligible(LONDON, PARIS, 344, ruleFor('rickshaw'))).toBe(false);
+      expect(isEligible(LONDON, PARIS, 344, ruleFor('tuk_tuk'))).toBe(false);
+    });
+
+    it('plane has no region predicate — accepts London ↔ New York regardless', () => {
       const nyc: CityInput = {
         id: 'nyc',
         name: 'New York',
         latitude: 40.71,
         longitude: -74.0,
         isCoastal: false,
+        region: 'north_america',
       };
       expect(isEligible(LONDON, nyc, 5570, ruleFor('plane'))).toBe(true);
     });

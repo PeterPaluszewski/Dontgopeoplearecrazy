@@ -64,6 +64,7 @@ export async function getAllLocations(): Promise<Location[]> {
     longitude: loc.longitude,
     difficultyMultiplier: loc.difficulty_multiplier,
     isCoastal: loc.is_coastal ?? false,
+    region: loc.region ?? 'unknown',
     connectedLocationIds: connectionMap.get(loc.id) ?? [],
   }));
 }
@@ -103,6 +104,7 @@ export async function getLocationById(id: string): Promise<Location | null> {
     longitude: data.longitude,
     difficultyMultiplier: data.difficulty_multiplier,
     isCoastal: data.is_coastal ?? false,
+    region: data.region ?? 'unknown',
     connectedLocationIds,
   };
 }

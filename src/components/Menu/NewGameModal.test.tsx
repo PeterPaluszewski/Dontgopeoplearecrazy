@@ -47,6 +47,7 @@ describe('NewGameModal', () => {
       longitude: 2.3522,
       difficultyMultiplier: 1.0,
       isCoastal: false,
+      region: 'europe_mainland',
       connectedLocationIds: [],
     },
     {
@@ -57,6 +58,7 @@ describe('NewGameModal', () => {
       longitude: 13.405,
       difficultyMultiplier: 1.0,
       isCoastal: false,
+      region: 'europe_mainland',
       connectedLocationIds: [],
     },
     {
@@ -67,6 +69,7 @@ describe('NewGameModal', () => {
       longitude: 4.9041,
       difficultyMultiplier: 1.0,
       isCoastal: false,
+      region: 'europe_mainland',
       connectedLocationIds: [],
     },
   ];
@@ -403,6 +406,7 @@ describe('NewGameModal', () => {
         longitude: 139.6503,
         difficultyMultiplier: 1.0,
         isCoastal: false,
+        region: 'japan',
         connectedLocationIds: [],
       },
     ]);

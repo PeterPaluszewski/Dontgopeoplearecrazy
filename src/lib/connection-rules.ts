@@ -24,6 +24,13 @@ export interface CityInput {
   latitude: number;
   longitude: number;
   isCoastal: boolean;
+  /**
+   * Overland region identifier. Cities in the same region are assumed to be
+   * reachable by land; cities in different regions require a water crossing.
+   * Examples: 'europe_mainland', 'british_isles', 'north_america', 'south_america',
+   *           'africa', 'asia', 'oceania'
+   */
+  region: string;
 }
 
 export interface GeneratedConnection {
@@ -53,7 +60,7 @@ export interface TransportRule {
   requiresBothCoastal: boolean;
   /**
    * Optional arbitrary predicate for rules that can't be expressed by the
-   * fields above (e.g. "same continent" or "not cross-water").
+   * fields above (e.g. same-region / cross-water checks).
    * Return false to reject the pair.
    */
   predicate?: (a: CityInput, b: CityInput, distanceKm: number) => boolean;
@@ -68,11 +75,13 @@ export interface TransportRule {
  *
  * Design notes:
  * - Distances are approximate gameplay values, not precise geography.
+ * - Overland transport types (on_foot, bicycle, hitchhike, car) use
+ *   `sameRegion(a, b)` as their predicate: cities must share the same
+ *   overland `region` value (set on each location in the DB) to be
+ *   connected.  Adding new cities just requires setting their `region`.
  * - "Coastal" routes (sailboat, freight_ship, cruise_ship) require both
  *   endpoints to be coastal; the `is_coastal` flag on each location controls
  *   this — it should be set by whoever seeds / updates the locations table.
- * - The `predicate` hook is used for qualitative exclusions that are hard to
- *   capture with a single number (e.g. cross-water walking).
  *
  * Speed reference (from transport_types seed):
  *   on_foot=5, bicycle=15, rickshaw=12, tuk_tuk=30,
@@ -82,49 +91,51 @@ export interface TransportRule {
 export const TRANSPORT_RULES: TransportRule[] = [
   {
     slug: 'on_foot',
-    description: 'Walking: overland only, ≤500 km',
+    description: 'Walking: same region (overland), ≤500 km',
     maxDistanceKm: 500,
     minDistanceKm: null,
     requiresBothCoastal: false,
-    predicate: (a, b, distanceKm) => !isCrossWater(a, b, distanceKm),
+    predicate: (a, b) => sameRegion(a, b),
   },
   {
     slug: 'bicycle',
-    description: 'Bicycle: overland only, ≤800 km',
+    description: 'Bicycle: same region (overland), ≤800 km',
     maxDistanceKm: 800,
     minDistanceKm: null,
     requiresBothCoastal: false,
-    predicate: (a, b, distanceKm) => !isCrossWater(a, b, distanceKm),
+    predicate: (a, b) => sameRegion(a, b),
   },
   {
     slug: 'rickshaw',
-    description: 'Rickshaw: short urban hops, ≤150 km',
+    description: 'Rickshaw: same region, short urban hops, ≤150 km',
     maxDistanceKm: 150,
     minDistanceKm: null,
     requiresBothCoastal: false,
+    predicate: (a, b) => sameRegion(a, b),
   },
   {
     slug: 'tuk_tuk',
-    description: 'Tuk-Tuk: short regional hops, ≤300 km',
+    description: 'Tuk-Tuk: same region, short regional hops, ≤300 km',
     maxDistanceKm: 300,
     minDistanceKm: null,
     requiresBothCoastal: false,
+    predicate: (a, b) => sameRegion(a, b),
   },
   {
     slug: 'hitchhike',
-    description: 'Hitchhike: overland only, ≤2000 km',
+    description: 'Hitchhike: same region (overland), ≤2000 km',
     maxDistanceKm: 2000,
     minDistanceKm: null,
     requiresBothCoastal: false,
-    predicate: (a, b, distanceKm) => !isCrossWater(a, b, distanceKm),
+    predicate: (a, b) => sameRegion(a, b),
   },
   {
     slug: 'car',
-    description: 'Car: overland only, ≤2000 km',
+    description: 'Car: same region (overland), ≤2000 km',
     maxDistanceKm: 2000,
     minDistanceKm: null,
     requiresBothCoastal: false,
-    predicate: (a, b, distanceKm) => !isCrossWater(a, b, distanceKm),
+    predicate: (a, b) => sameRegion(a, b),
   },
   {
     slug: 'sailboat',
@@ -157,115 +168,35 @@ export const TRANSPORT_RULES: TransportRule[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Cross-water heuristic
+// Region check
 // ---------------------------------------------------------------------------
 
 /**
- * A simple geographic heuristic: if two cities are separated by a known
- * body of water that cannot be crossed on land, return true.
+ * Returns true if two cities share the same overland region and can therefore
+ * be connected by land-based transport without a water crossing.
  *
- * This is expressed as a list of named "water barriers", each defined by
- * a bounding box and the pairs of cities it separates.  Adding a new known
- * water barrier here automatically blocks it for all overland transport types
- * (on_foot, bicycle, hitchhike, car).
+ * The `region` field on each location is the single source of truth.  To add
+ * a new landmass or island group, just define a new region slug and assign it
+ * to the relevant cities in the DB — no code changes needed here.
  *
- * This is intentionally a denylist — if a pair is NOT in the list we assume
- * it is overland-reachable.  Real geography is more complex, but this is a
- * game and the list can be extended city-by-city.
+ * Suggested region slugs:
+ *   europe_mainland  — Continental Europe (France, Germany, Spain, …)
+ *   british_isles    — UK, Ireland
+ *   north_africa     — Morocco, Algeria, Tunisia, Egypt, …
+ *   sub_saharan_africa
+ *   north_america    — USA, Canada, Mexico (connected overland)
+ *   central_america
+ *   south_america
+ *   asia_mainland    — Russia, China, India, SE Asia (… all connected overland)
+ *   japan            — Japanese archipelago
+ *   indonesia        — Indonesian archipelago
+ *   philippines
+ *   oceania          — Australia + NZ (separate islands — assign individually)
+ *   australia
+ *   new_zealand
  */
-interface WaterBarrier {
-  name: string;
-  /** Cities on the "west/north" side */
-  sideA: string[];
-  /** Cities on the "east/south" side */
-  sideB: string[];
-}
-
-export const WATER_BARRIERS: WaterBarrier[] = [
-  {
-    name: 'English Channel',
-    sideA: ['London'],
-    sideB: ['Paris', 'Amsterdam', 'Brussels', 'Calais'],
-  },
-  {
-    name: 'Strait of Gibraltar',
-    sideA: ['Madrid', 'Lisbon', 'Seville'],
-    sideB: ['Casablanca', 'Tangier', 'Marrakech'],
-  },
-  {
-    name: 'Mediterranean Sea (Italy–Africa)',
-    sideA: ['Rome', 'Naples', 'Palermo', 'Milan'],
-    sideB: ['Tunis', 'Tripoli', 'Algiers'],
-  },
-  {
-    name: 'Bosphorus / Black Sea (minor — overland via Turkey exists)',
-    sideA: [],
-    sideB: [],
-    // Left empty intentionally — Istanbul bridges Europe and Asia overland.
-  },
-  {
-    name: 'Atlantic Ocean',
-    sideA: ['London', 'Paris', 'Madrid', 'Lisbon', 'Dublin'],
-    sideB: [
-      'New York',
-      'Boston',
-      'Philadelphia',
-      'Washington',
-      'Miami',
-      'Toronto',
-      'Montreal',
-      'Quebec City',
-    ],
-  },
-  {
-    name: 'Pacific Ocean (Americas–Asia)',
-    sideA: ['Los Angeles', 'San Francisco', 'Seattle', 'Vancouver', 'San Diego', 'Portland'],
-    sideB: [
-      'Tokyo',
-      'Osaka',
-      'Seoul',
-      'Beijing',
-      'Shanghai',
-      'Hong Kong',
-      'Taipei',
-      'Manila',
-      'Singapore',
-    ],
-  },
-  {
-    name: 'Pacific Ocean (Americas–Oceania)',
-    sideA: [
-      'Los Angeles',
-      'San Francisco',
-      'Seattle',
-      'Vancouver',
-      'San Diego',
-      'Lima',
-      'Santiago',
-    ],
-    sideB: ['Sydney', 'Melbourne', 'Brisbane', 'Auckland', 'Perth'],
-  },
-  {
-    name: 'Indian Ocean',
-    sideA: ['Nairobi', 'Dar es Salaam', 'Johannesburg', 'Cape Town', 'Mombasa'],
-    sideB: ['Mumbai', 'Chennai', 'Colombo', 'Perth'],
-  },
-];
-
-/**
- * Returns true if city pair (a, b) is separated by a known water barrier.
- * Distance is passed in to allow future heuristics (e.g. a 3km strait is
- * not the same barrier as a 5000km ocean).
- */
-export function isCrossWater(a: CityInput, b: CityInput, _distanceKm: number): boolean {
-  for (const barrier of WATER_BARRIERS) {
-    const aInA = barrier.sideA.includes(a.name);
-    const bInB = barrier.sideB.includes(b.name);
-    const aInB = barrier.sideB.includes(a.name);
-    const bInA = barrier.sideA.includes(b.name);
-    if ((aInA && bInB) || (aInB && bInA)) return true;
-  }
-  return false;
+export function sameRegion(a: CityInput, b: CityInput): boolean {
+  return a.region === b.region;
 }
 
 // ---------------------------------------------------------------------------

@@ -18,6 +18,7 @@ describe('LocationInfo', () => {
     longitude: 2.3522,
     difficultyMultiplier: 3,
     isCoastal: false,
+    region: 'europe_mainland',
     connectedLocationIds: ['2', '3', '4'],
   };
 

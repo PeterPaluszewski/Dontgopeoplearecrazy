@@ -58,6 +58,7 @@ describe('Globe', () => {
       longitude: 2.3522,
       difficultyMultiplier: 1,
       isCoastal: false,
+      region: 'europe_mainland',
       connectedLocationIds: ['2', '3'],
     },
     {
@@ -68,6 +69,7 @@ describe('Globe', () => {
       longitude: -0.1278,
       difficultyMultiplier: 1,
       isCoastal: false,
+      region: 'british_isles',
       connectedLocationIds: ['1'],
     },
     {
@@ -78,6 +80,7 @@ describe('Globe', () => {
       longitude: 13.405,
       difficultyMultiplier: 2,
       isCoastal: false,
+      region: 'europe_mainland',
       connectedLocationIds: ['1'],
     },
   ];

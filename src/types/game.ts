@@ -35,6 +35,12 @@ export interface Location {
   longitude: number;
   difficultyMultiplier: number;
   isCoastal: boolean;
+  /**
+   * Overland region identifier (e.g. 'europe_mainland', 'british_isles', 'north_america').
+   * Two cities in the same region are assumed to be overland-reachable;
+   * different regions require a water crossing.
+   */
+  region: string;
   /** IDs of directly reachable locations — assembled from the location_connections table */
   connectedLocationIds: string[];
 }

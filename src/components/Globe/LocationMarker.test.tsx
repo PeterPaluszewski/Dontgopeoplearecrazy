@@ -46,6 +46,7 @@ describe('LocationMarker', () => {
     longitude: 2.3522,
     difficultyMultiplier: 1,
     isCoastal: false,
+    region: 'europe_mainland',
     connectedLocationIds: ['2', '3'],
   };
 
