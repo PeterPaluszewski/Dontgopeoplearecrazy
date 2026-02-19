@@ -3,8 +3,10 @@
 ## Agent Behaviour
 
 - When modifying or adding behaviour, create or update tests in the closest relevant test file. Run the most relevant focused tests after changes and report results. If tests are not feasible, explain why and propose an alternative verification step. Ensure all tests pass before finalizing changes.
-- **After every set of code changes, always run `npm run type-check` and `npm run test -- --run` and report the results before declaring work complete.** Do not consider a task done until both pass.
+- **After every set of code changes, always run `npm run type-check ; npm run test -- --run` as a single chained command and report the results before declaring work complete.** Do not consider a task done until both pass. Do not run them separately or multiple times — one combined run at the end is sufficient.
+- **When iterating on a fix, run only the affected test file first** (`npm run test -- --run src/path/to/file.test.ts`) for fast feedback, then do the single full `type-check ; test` run once at the end.
 - Keep changes minimal and consistent with existing style. Avoid unrelated refactors. Prefer root-cause fixes over surface-level patches.
+- **Never use `replace_string_in_file` to rewrite an entire file.** If a file needs a full rewrite, use `run_in_terminal` with PowerShell `Set-Content` to write the new content directly, avoiding the prepend/append bugs that arise from partial-match replacements. When using `replace_string_in_file`, always verify the replacement was applied correctly by checking for duplicate `describe` blocks, duplicate imports, or orphaned code with `grep_search` before running tests.
 
 ## Project Overview
 

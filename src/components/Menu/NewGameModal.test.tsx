@@ -38,6 +38,7 @@ describe('NewGameModal', () => {
 
   const mockSetCurrentLocationId = vi.fn();
 
+  // Mix of regions to test region filtering
   const mockLocations = [
     {
       id: 'paris-uuid',
@@ -68,8 +69,30 @@ describe('NewGameModal', () => {
       latitude: 52.3676,
       longitude: 4.9041,
       difficultyMultiplier: 1.0,
-      isCoastal: false,
+      isCoastal: true,
       region: 'europe_mainland',
+      connectedLocationIds: [],
+    },
+    {
+      id: 'tokyo-uuid',
+      name: 'Tokyo',
+      description: 'Capital of Japan',
+      latitude: 35.6762,
+      longitude: 139.6503,
+      difficultyMultiplier: 1.2,
+      isCoastal: true,
+      region: 'japan',
+      connectedLocationIds: [],
+    },
+    {
+      id: 'newyork-uuid',
+      name: 'New York',
+      description: 'The Big Apple',
+      latitude: 40.7128,
+      longitude: -74.006,
+      difficultyMultiplier: 1.0,
+      isCoastal: true,
+      region: 'north_america',
       connectedLocationIds: [],
     },
   ];
@@ -94,17 +117,11 @@ describe('NewGameModal', () => {
     });
   });
 
-  it('should load locations on mount', async () => {
+  it('should load all locations on mount', async () => {
     render(<NewGameModal isOpen={true} onClose={vi.fn()} />);
 
     await waitFor(() => {
       expect(database.getAllLocations).toHaveBeenCalled();
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText('Paris')).toBeInTheDocument();
-      expect(screen.getByText('Berlin')).toBeInTheDocument();
-      expect(screen.getByText('Amsterdam')).toBeInTheDocument();
     });
   });
 
@@ -118,7 +135,7 @@ describe('NewGameModal', () => {
     expect(screen.getByText('Loading locations...')).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByText('Paris')).toBeInTheDocument();
+      expect(screen.getByText('Central & Western Europe')).toBeInTheDocument();
     });
   });
 
@@ -151,7 +168,6 @@ describe('NewGameModal', () => {
     const easyButton = screen.getByText('Easy').closest('button');
     await user.click(easyButton!);
 
-    // Check if the button has the selected styling (border-blue-500 class)
     expect(easyButton).toHaveClass('border-blue-500');
   });
 
@@ -165,7 +181,31 @@ describe('NewGameModal', () => {
     expect(nameInput).toHaveValue('Test Player');
   });
 
-  it('should select Paris as default location', async () => {
+  it('should default to europe_mainland region', async () => {
+    render(<NewGameModal isOpen={true} onClose={vi.fn()} />);
+
+    await waitFor(() => {
+      const europeButton = screen.getByText('Central & Western Europe').closest('button');
+      expect(europeButton).toHaveClass('border-blue-500');
+    });
+  });
+
+  it('should show cities in the selected region', async () => {
+    render(<NewGameModal isOpen={true} onClose={vi.fn()} />);
+
+    await waitFor(() => {
+      // europe_mainland is selected by default
+      expect(screen.getByText('Paris')).toBeInTheDocument();
+      expect(screen.getByText('Berlin')).toBeInTheDocument();
+      expect(screen.getByText('Amsterdam')).toBeInTheDocument();
+    });
+
+    // Cities from other regions should not be visible initially
+    expect(screen.queryByText('Tokyo')).not.toBeInTheDocument();
+    expect(screen.queryByText('New York')).not.toBeInTheDocument();
+  });
+
+  it('should select Paris as default city in europe_mainland', async () => {
     render(<NewGameModal isOpen={true} onClose={vi.fn()} />);
 
     await waitFor(() => {
@@ -174,7 +214,37 @@ describe('NewGameModal', () => {
     });
   });
 
-  it('should allow selecting starting location', async () => {
+  it('should show region buttons for all distinct regions', async () => {
+    render(<NewGameModal isOpen={true} onClose={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Central & Western Europe')).toBeInTheDocument();
+      expect(screen.getByText('Japan')).toBeInTheDocument();
+      expect(screen.getByText('North America')).toBeInTheDocument();
+    });
+  });
+
+  it('should filter cities when a different region is selected', async () => {
+    const user = userEvent.setup();
+    render(<NewGameModal isOpen={true} onClose={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Japan')).toBeInTheDocument();
+    });
+
+    const japanButton = screen.getByText('Japan').closest('button');
+    await user.click(japanButton!);
+
+    await waitFor(() => {
+      expect(screen.getByText('Tokyo')).toBeInTheDocument();
+    });
+
+    // European cities should no longer be visible
+    expect(screen.queryByText('Paris')).not.toBeInTheDocument();
+    expect(screen.queryByText('Berlin')).not.toBeInTheDocument();
+  });
+
+  it('should allow selecting a starting city', async () => {
     const user = userEvent.setup();
     render(<NewGameModal isOpen={true} onClose={vi.fn()} />);
 
@@ -396,32 +466,48 @@ describe('NewGameModal', () => {
     expect(screen.getByText('Cancel')).toBeDisabled();
   });
 
-  it('should display "No locations available" when no locations match filter', async () => {
-    vi.mocked(database.getAllLocations).mockResolvedValue([
-      {
-        id: 'tokyo-uuid',
-        name: 'Tokyo',
-        description: 'Capital of Japan',
-        latitude: 35.6762,
-        longitude: 139.6503,
-        difficultyMultiplier: 1.0,
-        isCoastal: false,
-        region: 'japan',
-        connectedLocationIds: [],
-      },
-    ]);
-
-    render(<NewGameModal isOpen={true} onClose={vi.fn()} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('No locations available')).toBeInTheDocument();
-    });
-  });
-
   it('should limit character name to 30 characters', async () => {
     render(<NewGameModal isOpen={true} onClose={vi.fn()} />);
 
     const nameInput = screen.getByPlaceholderText('Enter your name...') as HTMLInputElement;
     expect(nameInput).toHaveAttribute('maxLength', '30');
+  });
+
+  it('should reset city selection to first city when switching region', async () => {
+    const user = userEvent.setup();
+    vi.mocked(saveLoad.createNewGame).mockResolvedValue({
+      success: true,
+      gameStateId: 'test-game-id',
+    });
+
+    render(<NewGameModal isOpen={true} onClose={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Japan')).toBeInTheDocument();
+    });
+
+    // Switch to Japan region
+    const japanButton = screen.getByText('Japan').closest('button');
+    await user.click(japanButton!);
+
+    await waitFor(() => {
+      expect(screen.getByText('Tokyo')).toBeInTheDocument();
+    });
+
+    // Start game — should use Tokyo (the only/first city in Japan)
+    const startButton = screen.getByText('Start Adventure');
+    await user.click(startButton);
+
+    await waitFor(() => {
+      expect(saveLoad.createNewGame).toHaveBeenCalledWith('tokyo-uuid', 'normal', undefined);
+    });
+  });
+
+  it('should show city count label', async () => {
+    render(<NewGameModal isOpen={true} onClose={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('City (3 available)')).toBeInTheDocument();
+    });
   });
 });
