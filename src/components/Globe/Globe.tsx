@@ -154,14 +154,20 @@ export default function Globe({
       viewportHeight.current,
       cameraDistance.current
     );
-    groupRef.current.rotation.y += deltaX * radiansPerPixel;
-    groupRef.current.rotation.x += deltaY * radiansPerPixel;
 
-    const maxTilt = Math.PI / 2;
-    groupRef.current.rotation.x = Math.max(
-      -maxTilt,
-      Math.min(maxTilt, groupRef.current.rotation.x)
+    // Apply rotations as world-space quaternion multiplications to avoid
+    // gimbal flip: when the globe is upside down, Euler Y-rotation reverses.
+    // Rotating around fixed world axes (Y for horizontal, X for vertical)
+    // keeps drag direction consistent at any orientation.
+    const yaw = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      deltaX * radiansPerPixel
     );
+    const pitch = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(1, 0, 0),
+      deltaY * radiansPerPixel
+    );
+    groupRef.current.quaternion.premultiply(yaw).premultiply(pitch);
   };
 
   const handlePointerUp = () => {
