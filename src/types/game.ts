@@ -1,3 +1,13 @@
+export interface LocationConnection {
+  id: string;
+  fromId: string;
+  toId: string;
+  transportType: string;
+  distanceKm: number | null;
+  difficultyModifier: number;
+  isBidirectional: boolean;
+}
+
 export interface Location {
   id: string;
   name: string;
@@ -6,6 +16,7 @@ export interface Location {
   longitude: number;
   difficultyMultiplier: number;
   travelDays: number;
+  /** IDs of directly reachable locations — assembled from the location_connections table */
   connectedLocationIds: string[];
 }
 

@@ -1,20 +1,55 @@
-import type { GameEvent, GameState, Item, Location } from '@/types/game';
+import type { GameEvent, GameState, Item, Location, LocationConnection } from '@/types/game';
 import { createClient } from './supabase';
 
 // ============================================
 // LOCATIONS
 // ============================================
 
-export async function getAllLocations(): Promise<Location[]> {
-  const supabase = createClient();
-  const { data, error } = await supabase.from('locations').select('*').order('name');
+/**
+ * Fetch all location_connections rows and return a map of
+ * locationId -> connectedLocationIds[], treating connections as bidirectional.
+ */
+async function getConnectionMap(
+  supabase: ReturnType<typeof createClient>
+): Promise<Map<string, string[]>> {
+  const { data, error } = await supabase
+    .from('location_connections')
+    .select('from_id, to_id, is_bidirectional');
 
   if (error) {
-    console.error('Error fetching locations:', error);
+    console.error('Error fetching location connections:', error);
     throw error;
   }
 
-  return (data || []).map((loc) => ({
+  const map = new Map<string, string[]>();
+  const add = (key: string, value: string) => {
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(value);
+  };
+
+  for (const row of data || []) {
+    add(row.from_id, row.to_id);
+    if (row.is_bidirectional) {
+      add(row.to_id, row.from_id);
+    }
+  }
+
+  return map;
+}
+
+export async function getAllLocations(): Promise<Location[]> {
+  const supabase = createClient();
+  const [locResult, connectionMap] = await Promise.all([
+    supabase.from('locations').select('*').order('name'),
+    getConnectionMap(supabase),
+  ]);
+
+  if (locResult.error) {
+    console.error('Error fetching locations:', locResult.error);
+    throw locResult.error;
+  }
+
+  return (locResult.data || []).map((loc) => ({
     id: loc.id,
     name: loc.name,
     description: loc.description || '',
@@ -22,21 +57,37 @@ export async function getAllLocations(): Promise<Location[]> {
     longitude: loc.longitude,
     difficultyMultiplier: loc.difficulty_multiplier,
     travelDays: loc.travel_days,
-    connectedLocationIds: loc.connected_location_ids || [],
+    connectedLocationIds: connectionMap.get(loc.id) ?? [],
   }));
 }
 
 export async function getLocationById(id: string): Promise<Location | null> {
   const supabase = createClient();
-  const { data, error } = await supabase.from('locations').select('*').eq('id', id).single();
+  const [locResult, connFrom, connTo] = await Promise.all([
+    supabase.from('locations').select('*').eq('id', id).single(),
+    supabase.from('location_connections').select('to_id').eq('from_id', id),
+    supabase
+      .from('location_connections')
+      .select('from_id')
+      .eq('to_id', id)
+      .eq('is_bidirectional', true),
+  ]);
 
-  if (error) {
-    console.error('Error fetching location:', error);
+  if (locResult.error) {
+    console.error('Error fetching location:', locResult.error);
     return null;
   }
 
-  if (!data) return null;
+  if (!locResult.data) return null;
 
+  const connectedIds = [
+    ...(connFrom.data || []).map((r) => r.to_id),
+    ...(connTo.data || []).map((r) => r.from_id),
+  ];
+  // Deduplicate (a connection could appear on both sides)
+  const connectedLocationIds = [...new Set(connectedIds)];
+
+  const data = locResult.data;
   return {
     id: data.id,
     name: data.name,
@@ -45,8 +96,35 @@ export async function getLocationById(id: string): Promise<Location | null> {
     longitude: data.longitude,
     difficultyMultiplier: data.difficulty_multiplier,
     travelDays: data.travel_days,
-    connectedLocationIds: data.connected_location_ids || [],
+    connectedLocationIds,
   };
+}
+
+// ============================================
+// LOCATION CONNECTIONS
+// ============================================
+
+export async function getConnectionsForLocation(locationId: string): Promise<LocationConnection[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from('location_connections')
+    .select('*')
+    .or(`from_id.eq.${locationId},to_id.eq.${locationId}`);
+
+  if (error) {
+    console.error('Error fetching connections:', error);
+    throw error;
+  }
+
+  return (data || []).map((row) => ({
+    id: row.id,
+    fromId: row.from_id,
+    toId: row.to_id,
+    transportType: row.transport_type ?? 'any',
+    distanceKm: row.distance_km ?? null,
+    difficultyModifier: row.difficulty_modifier ?? 1.0,
+    isBidirectional: row.is_bidirectional ?? true,
+  }));
 }
 
 // ============================================
