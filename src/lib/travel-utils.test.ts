@@ -120,7 +120,8 @@ describe('travel-utils', () => {
       latitude: 52.52,
       longitude: 13.405,
       difficultyMultiplier: 2,
-      travelDays: 1,
+      isCoastal: false,
+      region: 'europe_mainland',
       connectedLocationIds: ['location-1'],
     };
 

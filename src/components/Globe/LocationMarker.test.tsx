@@ -15,7 +15,7 @@ vi.mock('three', async () => {
 
 // Mock react-three/fiber
 vi.mock('@react-three/fiber', () => ({
-  useFrame: vi.fn((callback) => {
+  useFrame: vi.fn(() => {
     // Don't execute the animation callback in tests
   }),
   useThree: () => ({
@@ -45,12 +45,13 @@ describe('LocationMarker', () => {
     latitude: 48.8566,
     longitude: 2.3522,
     difficultyMultiplier: 1,
-    travelDays: 0,
+    isCoastal: false,
+    region: 'europe_mainland',
     connectedLocationIds: ['2', '3'],
   };
 
-  let mockOnClick: ReturnType<typeof vi.fn>;
-  let mockOnHover: ReturnType<typeof vi.fn>;
+  let mockOnClick: () => void;
+  let mockOnHover: (hovered: boolean) => void;
 
   beforeEach(() => {
     mockOnClick = vi.fn();

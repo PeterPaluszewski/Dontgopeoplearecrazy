@@ -1,10 +1,10 @@
 'use client';
 
 import { getCompassLabel, getHeadingDegreesFromVector } from '@/lib/compass-utils';
-import { calculateGlobeQuaternion } from '@/lib/globe-utils';
+import { calculateDragRadiansPerPixel, calculateGlobeQuaternion } from '@/lib/globe-utils';
 import type { Location } from '@/types/game';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsType } from 'three-stdlib';
@@ -16,6 +16,7 @@ import LocationMarker from './LocationMarker';
 interface GlobeProps {
   locations: Location[];
   currentLocationId?: string;
+  selectedLocationId?: string;
   visitedLocationIds: string[];
   onLocationClick: (location: Location) => void;
   onDebugUpdate?: (debug: GlobeDebugInfo) => void;
@@ -34,6 +35,7 @@ export interface GlobeDebugInfo {
 export default function Globe({
   locations,
   currentLocationId,
+  selectedLocationId,
   visitedLocationIds,
   onLocationClick,
   onDebugUpdate,
@@ -44,29 +46,46 @@ export default function Globe({
   const dragState = useRef({ isDragging: false, lastX: 0, lastY: 0 });
   const [showBorders, setShowBorders] = useState(false);
 
-  // Rotate globe to show current location on load
-  useEffect(() => {
-    if (currentLocationId && locations.length > 0 && groupRef.current?.rotation) {
-      const currentLocation = locations.find(loc => loc.id === currentLocationId);
-      if (currentLocation) {
-        const rotationQuat = calculateGlobeQuaternion(
-          currentLocation.latitude,
-          currentLocation.longitude,
-          2 // globe radius
-        );
+  // Derived target quaternion for smooth rotation — recomputed when location changes
+  const targetQuaternion = useRef<THREE.Quaternion | null>(null);
+  const isAnimating = useRef(false);
+  const cameraDistance = useRef(6); // tracks live camera z-distance for drag scaling
+  const cameraFov = useRef(75); // tracks live camera FOV (degrees)
+  const viewportHeight = useRef(600); // tracks canvas pixel height
 
-        groupRef.current.quaternion.copy(rotationQuat);
-      }
-    }
+  useEffect(() => {
+    if (!currentLocationId || locations.length === 0) return;
+    const currentLocation = locations.find((loc) => loc.id === currentLocationId);
+    if (!currentLocation) return;
+    targetQuaternion.current = calculateGlobeQuaternion(
+      currentLocation.latitude,
+      currentLocation.longitude,
+      2
+    );
+    isAnimating.current = true;
   }, [currentLocationId, locations]);
 
   const DebugProbe = ({ onUpdate }: { onUpdate?: (debug: GlobeDebugInfo) => void }) => {
-    const { camera } = useThree();
     const lastUpdateRef = useRef(0);
     const upVectorRef = useRef(new THREE.Vector3());
     const lastZoomRef = useRef<boolean | null>(null);
 
-    useFrame(({ clock }) => {
+    useFrame(({ clock, camera, size }, delta) => {
+      // Keep camera state in sync for surface-locked drag calculation
+      cameraDistance.current = camera.position.length();
+      cameraFov.current = (camera as THREE.PerspectiveCamera).fov ?? 75;
+      viewportHeight.current = size.height;
+
+      // Smooth rotation animation toward target quaternion
+      if (isAnimating.current && targetQuaternion.current && groupRef.current) {
+        groupRef.current.quaternion.slerp(targetQuaternion.current, Math.min(1, delta * 3));
+        const angle = groupRef.current.quaternion.angleTo(targetQuaternion.current);
+        if (angle < 0.001) {
+          groupRef.current.quaternion.copy(targetQuaternion.current);
+          isAnimating.current = false;
+        }
+      }
+
       const zoomedIn = camera.position.z <= 3;
       if (lastZoomRef.current !== zoomedIn) {
         lastZoomRef.current = zoomedIn;
@@ -112,6 +131,8 @@ export default function Globe({
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    // Cancel any in-progress rotation animation when the user grabs the globe
+    isAnimating.current = false;
     dragState.current = {
       isDragging: true,
       lastX: event.clientX,
@@ -127,15 +148,26 @@ export default function Globe({
     dragState.current.lastX = event.clientX;
     dragState.current.lastY = event.clientY;
 
-    const rotationSpeed = 0.005;
-    groupRef.current.rotation.y += deltaX * rotationSpeed;
-    groupRef.current.rotation.x += deltaY * rotationSpeed;
-
-    const maxTilt = Math.PI / 2;
-    groupRef.current.rotation.x = Math.max(
-      -maxTilt,
-      Math.min(maxTilt, groupRef.current.rotation.x)
+    // Surface-locked drag: see calculateDragRadiansPerPixel in globe-utils.ts
+    const radiansPerPixel = calculateDragRadiansPerPixel(
+      cameraFov.current,
+      viewportHeight.current,
+      cameraDistance.current
     );
+
+    // Apply rotations as world-space quaternion multiplications to avoid
+    // gimbal flip: when the globe is upside down, Euler Y-rotation reverses.
+    // Rotating around fixed world axes (Y for horizontal, X for vertical)
+    // keeps drag direction consistent at any orientation.
+    const yaw = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(0, 1, 0),
+      deltaX * radiansPerPixel
+    );
+    const pitch = new THREE.Quaternion().setFromAxisAngle(
+      new THREE.Vector3(1, 0, 0),
+      deltaY * radiansPerPixel
+    );
+    groupRef.current.quaternion.premultiply(yaw).premultiply(pitch);
   };
 
   const handlePointerUp = () => {
@@ -160,10 +192,15 @@ export default function Globe({
           <directionalLight position={[5, 5, 5]} intensity={1} />
           <pointLight position={[-5, -5, -5]} intensity={0.5} />
 
-          {/* Globe and Markers - grouped together so they rotate as one */}
+          {/* Globe — sphere, connections, borders and markers grouped so they rotate together */}
           <group ref={groupRef}>
             <GlobeSphere />
-            <ConnectionLines locations={locations} globeRadius={2} />
+            <ConnectionLines
+              locations={locations}
+              globeRadius={2}
+              highlightedFromId={currentLocationId}
+              highlightedToId={selectedLocationId}
+            />
             {showBorders && <CountryBordersOverlay globeRadius={2} />}
             {/* Location Markers */}
             {locations.map((location) => (

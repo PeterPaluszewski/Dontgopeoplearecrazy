@@ -52,9 +52,9 @@ export default function LocationInfo({ location, onTravelClick }: LocationInfoPr
 
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-gray-700 rounded p-3">
-          <div className="text-xs text-gray-400 mb-1">Travel Time</div>
+          <div className="text-xs text-gray-400 mb-1">Terrain</div>
           <div className="text-lg font-bold text-white">
-            {location.travelDays} {location.travelDays === 1 ? 'day' : 'days'}
+            {location.isCoastal ? 'Coastal' : 'Inland'}
           </div>
         </div>
         <div className="bg-gray-700 rounded p-3">

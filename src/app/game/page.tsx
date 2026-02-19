@@ -94,14 +94,6 @@ export default function GamePage() {
     checkUser();
   }, [router, visitLocation, setCurrentLocationId, loadGameFromDB]);
 
-  useEffect(() => {
-    if (locations.length === 0) return;
-    const current = findLocationById(locations, currentLocationId);
-    if (current) {
-      setSelectedLocation(current);
-    }
-  }, [currentLocationId, locations]);
-
   // ESC key handler for in-game menu
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -133,10 +125,7 @@ export default function GamePage() {
   const handleTravelConfirm = async () => {
     if (!travelDestination) return;
 
-    const cost = calculateTravelCost(
-      travelDestination.travelDays,
-      travelDestination.difficultyMultiplier
-    );
+    const cost = calculateTravelCost(1, travelDestination.difficultyMultiplier);
     travelToLocation(travelDestination.id, cost);
     setSelectedLocation(travelDestination);
     setTravelDestination(null);
@@ -260,7 +249,8 @@ export default function GamePage() {
                   <div className="font-mono text-gray-400">
                     {selectedLocation
                       ? `${(selectedLocation.latitude * (Math.PI / 180)).toFixed(3)} rad, ${(
-                          selectedLocation.longitude * (Math.PI / 180)
+                          selectedLocation.longitude *
+                          (Math.PI / 180)
                         ).toFixed(3)} rad`
                       : '—'}
                   </div>
@@ -282,6 +272,7 @@ export default function GamePage() {
         <Globe
           locations={locations}
           currentLocationId={currentLocationId}
+          selectedLocationId={selectedLocation?.id}
           visitedLocationIds={visitedLocationIds}
           onLocationClick={handleLocationClick}
           onDebugUpdate={setGlobeDebug}

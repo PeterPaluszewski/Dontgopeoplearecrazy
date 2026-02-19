@@ -13,20 +13,54 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Locations table
 CREATE TABLE IF NOT EXISTS locations (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   description TEXT,
   latitude REAL NOT NULL,
   longitude REAL NOT NULL,
   difficulty_multiplier REAL DEFAULT 1.0,
-  travel_days INTEGER DEFAULT 1,
-  connected_location_ids UUID[] DEFAULT '{}',
+  is_coastal BOOLEAN NOT NULL DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Location connections table
+CREATE TABLE IF NOT EXISTS location_connections (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  from_id       UUID NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
+  to_id         UUID NOT NULL REFERENCES locations(id) ON DELETE CASCADE,
+  distance_km    REAL,
+  difficulty_modifier REAL DEFAULT 1.0,
+  is_bidirectional BOOLEAN DEFAULT TRUE,
+  created_at    TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE (from_id, to_id)
+);
+
+-- Transport types table
+CREATE TABLE IF NOT EXISTS transport_types (
+  id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug                 TEXT NOT NULL UNIQUE,
+  name                 TEXT NOT NULL,
+  speed_kmh            REAL NOT NULL,
+  base_cost_multiplier REAL NOT NULL DEFAULT 1.0,
+  requires_item_slug   TEXT,
+  requires_coastal     BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at           TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Connection transport types junction table
+CREATE TABLE IF NOT EXISTS connection_transport_types (
+  id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  connection_id            UUID NOT NULL REFERENCES location_connections(id) ON DELETE CASCADE,
+  transport_type_id        UUID NOT NULL REFERENCES transport_types(id) ON DELETE CASCADE,
+  is_forward               BOOLEAN NOT NULL DEFAULT TRUE,
+  cost_multiplier_override REAL,
+  created_at               TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE (connection_id, transport_type_id, is_forward)
 );
 
 -- Items table
 CREATE TABLE IF NOT EXISTS items (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   description TEXT,
   weight REAL DEFAULT 0,
@@ -39,7 +73,7 @@ CREATE TABLE IF NOT EXISTS items (
 
 -- Game states table
 CREATE TABLE IF NOT EXISTS game_states (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   current_location_id UUID REFERENCES locations(id),
   food REAL DEFAULT 100,
@@ -54,7 +88,7 @@ CREATE TABLE IF NOT EXISTS game_states (
 
 -- Game events table
 CREATE TABLE IF NOT EXISTS game_events (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   title TEXT NOT NULL,
   description TEXT,
   event_type TEXT CHECK (event_type IN ('RANDOM', 'LOCATION_BASED', 'RESOURCE_BASED')),
@@ -71,12 +105,18 @@ CREATE TABLE IF NOT EXISTS game_events (
 
 -- Enable RLS on all tables
 ALTER TABLE locations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE location_connections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transport_types ENABLE ROW LEVEL SECURITY;
+ALTER TABLE connection_transport_types ENABLE ROW LEVEL SECURITY;
 ALTER TABLE items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE game_states ENABLE ROW LEVEL SECURITY;
 ALTER TABLE game_events ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies if any
 DROP POLICY IF EXISTS "Locations are viewable by everyone" ON locations;
+DROP POLICY IF EXISTS "Location connections are viewable by everyone" ON location_connections;
+DROP POLICY IF EXISTS "Transport types are viewable by everyone" ON transport_types;
+DROP POLICY IF EXISTS "Connection transport types are viewable by everyone" ON connection_transport_types;
 DROP POLICY IF EXISTS "Items are viewable by everyone" ON items;
 DROP POLICY IF EXISTS "Users can view their own game states" ON game_states;
 DROP POLICY IF EXISTS "Users can insert their own game states" ON game_states;
@@ -87,6 +127,21 @@ DROP POLICY IF EXISTS "Events are viewable by everyone" ON game_events;
 -- Policies for locations (public read)
 CREATE POLICY "Locations are viewable by everyone"
   ON locations FOR SELECT
+  USING (true);
+
+-- Policies for location_connections (public read)
+CREATE POLICY "Location connections are viewable by everyone"
+  ON location_connections FOR SELECT
+  USING (true);
+
+-- Policies for transport_types (public read)
+CREATE POLICY "Transport types are viewable by everyone"
+  ON transport_types FOR SELECT
+  USING (true);
+
+-- Policies for connection_transport_types (public read)
+CREATE POLICY "Connection transport types are viewable by everyone"
+  ON connection_transport_types FOR SELECT
   USING (true);
 
 -- Policies for items (public read)
@@ -142,79 +197,64 @@ CREATE TRIGGER update_game_states_updated_at
 -- SEED DATA - Initial Locations
 -- ============================================
 
-INSERT INTO locations (name, description, latitude, longitude, difficulty_multiplier, travel_days) VALUES
-  ('Paris', 'The City of Light, a perfect starting point for your backpacking adventure. Explore the Eiffel Tower, Louvre, and charming cafés.', 48.8566, 2.3522, 1.0, 0),
-  ('Barcelona', 'Mediterranean paradise with stunning architecture by Gaudí. Beaches, tapas, and vibrant nightlife await.', 41.3851, 2.1734, 1.2, 2),
-  ('Berlin', 'Historic city with vibrant culture and nightlife. Museums, street art, and diverse neighborhoods.', 52.5200, 13.4050, 1.1, 3),
-  ('Rome', 'Ancient ruins meet modern Italian charm. The Colosseum, Vatican, and authentic pasta everywhere.', 41.9028, 12.4964, 1.3, 2),
-  ('Amsterdam', 'Canals, bicycles, and historic charm. Museums, tulips, and friendly locals.', 52.3676, 4.9041, 1.0, 1),
-  ('Prague', 'Fairy-tale city with Gothic architecture and affordable prices. Castle, bridges, and beer gardens.', 50.0755, 14.4378, 1.1, 2),
-  ('Vienna', 'Imperial grandeur and classical music. Palaces, coffee houses, and rich cultural heritage.', 48.2082, 16.3738, 1.2, 2),
-  ('Budapest', 'Thermal baths and stunning views along the Danube. Ruin bars and hearty Hungarian cuisine.', 47.4979, 19.0402, 1.1, 3),
-  ('London', 'Historic capital with world-class museums and diverse culture. Expensive but worth the visit.', 51.5074, -0.1278, 1.5, 1),
-  ('Lisbon', 'Coastal charm with colorful tiles and steep hills. Pastéis de nata and fado music.', 38.7223, -9.1393, 1.1, 3)
+INSERT INTO locations (name, description, latitude, longitude, difficulty_multiplier, is_coastal) VALUES
+  ('Paris', 'The City of Light, a perfect starting point for your backpacking adventure. Explore the Eiffel Tower, Louvre, and charming cafés.', 48.8566, 2.3522, 1.0, FALSE),
+  ('Barcelona', 'Mediterranean paradise with stunning architecture by Gaudí. Beaches, tapas, and vibrant nightlife await.', 41.3851, 2.1734, 1.2, TRUE),
+  ('Berlin', 'Historic city with vibrant culture and nightlife. Museums, street art, and diverse neighborhoods.', 52.5200, 13.4050, 1.1, FALSE),
+  ('Rome', 'Ancient ruins meet modern Italian charm. The Colosseum, Vatican, and authentic pasta everywhere.', 41.9028, 12.4964, 1.3, FALSE),
+  ('Amsterdam', 'Canals, bicycles, and historic charm. Museums, tulips, and friendly locals.', 52.3676, 4.9041, 1.0, FALSE),
+  ('Prague', 'Fairy-tale city with Gothic architecture and affordable prices. Castle, bridges, and beer gardens.', 50.0755, 14.4378, 1.1, FALSE),
+  ('Vienna', 'Imperial grandeur and classical music. Palaces, coffee houses, and rich cultural heritage.', 48.2082, 16.3738, 1.2, FALSE),
+  ('Budapest', 'Thermal baths and stunning views along the Danube. Ruin bars and hearty Hungarian cuisine.', 47.4979, 19.0402, 1.1, FALSE),
+  ('London', 'Historic capital with world-class museums and diverse culture. Expensive but worth the visit.', 51.5074, -0.1278, 1.5, FALSE),
+  ('Lisbon', 'Coastal charm with colorful tiles and steep hills. Pastéis de nata and fado music.', 38.7223, -9.1393, 1.1, TRUE)
 ON CONFLICT DO NOTHING;
 
--- Connect locations to create a travel network
-UPDATE locations SET connected_location_ids = ARRAY[
-  (SELECT id FROM locations WHERE name = 'Barcelona'),
-  (SELECT id FROM locations WHERE name = 'Berlin'),
-  (SELECT id FROM locations WHERE name = 'Amsterdam'),
-  (SELECT id FROM locations WHERE name = 'London')
-] WHERE name = 'Paris';
+-- Seed transport types
+INSERT INTO transport_types (slug, name, speed_kmh, base_cost_multiplier, requires_item_slug, requires_coastal) VALUES
+  ('on_foot',      'On Foot',      5,   1.2,  NULL,       FALSE),
+  ('bicycle',      'Bicycle',      15,  1.0,  'bicycle',  FALSE),
+  ('rickshaw',     'Rickshaw',     12,  1.1,  NULL,       FALSE),
+  ('tuk_tuk',      'Tuk-Tuk',      30,  1.0,  NULL,       FALSE),
+  ('car',          'Car',          90,  0.8,  'car',      FALSE),
+  ('hitchhike',    'Hitchhike',    80,  0.7,  NULL,       FALSE),
+  ('sailboat',     'Sailboat',     20,  1.3,  'sailboat', TRUE),
+  ('freight_ship', 'Freight Ship', 30,  1.1,  NULL,       TRUE),
+  ('cruise_ship',  'Cruise Ship',  40,  0.6,  NULL,       TRUE),
+  ('plane',        'Plane',        800, 0.4,  NULL,       FALSE)
+ON CONFLICT (slug) DO NOTHING;
 
-UPDATE locations SET connected_location_ids = ARRAY[
-  (SELECT id FROM locations WHERE name = 'Paris'),
-  (SELECT id FROM locations WHERE name = 'Rome'),
-  (SELECT id FROM locations WHERE name = 'Lisbon')
-] WHERE name = 'Barcelona';
-
-UPDATE locations SET connected_location_ids = ARRAY[
-  (SELECT id FROM locations WHERE name = 'Paris'),
-  (SELECT id FROM locations WHERE name = 'Amsterdam'),
-  (SELECT id FROM locations WHERE name = 'Prague'),
-  (SELECT id FROM locations WHERE name = 'Vienna')
-] WHERE name = 'Berlin';
-
-UPDATE locations SET connected_location_ids = ARRAY[
-  (SELECT id FROM locations WHERE name = 'Barcelona'),
-  (SELECT id FROM locations WHERE name = 'Vienna'),
-  (SELECT id FROM locations WHERE name = 'Budapest')
-] WHERE name = 'Rome';
-
-UPDATE locations SET connected_location_ids = ARRAY[
-  (SELECT id FROM locations WHERE name = 'Paris'),
-  (SELECT id FROM locations WHERE name = 'Berlin'),
-  (SELECT id FROM locations WHERE name = 'London')
-] WHERE name = 'Amsterdam';
-
-UPDATE locations SET connected_location_ids = ARRAY[
-  (SELECT id FROM locations WHERE name = 'Berlin'),
-  (SELECT id FROM locations WHERE name = 'Vienna'),
-  (SELECT id FROM locations WHERE name = 'Budapest')
-] WHERE name = 'Prague';
-
-UPDATE locations SET connected_location_ids = ARRAY[
-  (SELECT id FROM locations WHERE name = 'Berlin'),
-  (SELECT id FROM locations WHERE name = 'Prague'),
-  (SELECT id FROM locations WHERE name = 'Budapest'),
-  (SELECT id FROM locations WHERE name = 'Rome')
-] WHERE name = 'Vienna';
-
-UPDATE locations SET connected_location_ids = ARRAY[
-  (SELECT id FROM locations WHERE name = 'Vienna'),
-  (SELECT id FROM locations WHERE name = 'Prague'),
-  (SELECT id FROM locations WHERE name = 'Rome')
-] WHERE name = 'Budapest';
-
-UPDATE locations SET connected_location_ids = ARRAY[
-  (SELECT id FROM locations WHERE name = 'Paris'),
-  (SELECT id FROM locations WHERE name = 'Amsterdam')
-] WHERE name = 'London';
-
-UPDATE locations SET connected_location_ids = ARRAY[
-  (SELECT id FROM locations WHERE name = 'Barcelona')
-] WHERE name = 'Lisbon';
+-- Connect locations via the location_connections table
+-- is_bidirectional = TRUE (default) so each row covers both directions.
+INSERT INTO location_connections (from_id, to_id) VALUES
+  -- Paris connections
+  ((SELECT id FROM locations WHERE name = 'Paris'),     (SELECT id FROM locations WHERE name = 'London')),
+  ((SELECT id FROM locations WHERE name = 'Paris'),     (SELECT id FROM locations WHERE name = 'Amsterdam')),
+  ((SELECT id FROM locations WHERE name = 'Paris'),     (SELECT id FROM locations WHERE name = 'Berlin')),
+  ((SELECT id FROM locations WHERE name = 'Paris'),     (SELECT id FROM locations WHERE name = 'Barcelona')),
+  -- Barcelona connections (Paris already covered above)
+  ((SELECT id FROM locations WHERE name = 'Barcelona'), (SELECT id FROM locations WHERE name = 'Rome')),
+  ((SELECT id FROM locations WHERE name = 'Barcelona'), (SELECT id FROM locations WHERE name = 'Lisbon')),
+  -- Berlin connections (Paris, Amsterdam already covered)
+  ((SELECT id FROM locations WHERE name = 'Berlin'),    (SELECT id FROM locations WHERE name = 'Amsterdam')),
+  ((SELECT id FROM locations WHERE name = 'Berlin'),    (SELECT id FROM locations WHERE name = 'Prague')),
+  ((SELECT id FROM locations WHERE name = 'Berlin'),    (SELECT id FROM locations WHERE name = 'Vienna')),
+  -- Rome connections (Barcelona already covered)
+  ((SELECT id FROM locations WHERE name = 'Rome'),      (SELECT id FROM locations WHERE name = 'Vienna')),
+  ((SELECT id FROM locations WHERE name = 'Rome'),      (SELECT id FROM locations WHERE name = 'Budapest')),
+  -- Amsterdam connections (Paris, Berlin already covered)
+  ((SELECT id FROM locations WHERE name = 'Amsterdam'), (SELECT id FROM locations WHERE name = 'London')),
+  -- Prague connections (Berlin already covered)
+  ((SELECT id FROM locations WHERE name = 'Prague'),    (SELECT id FROM locations WHERE name = 'Vienna')),
+  ((SELECT id FROM locations WHERE name = 'Prague'),    (SELECT id FROM locations WHERE name = 'Budapest')),
+  -- Vienna connections (Berlin, Rome, Prague already covered)
+  ((SELECT id FROM locations WHERE name = 'Vienna'),    (SELECT id FROM locations WHERE name = 'Budapest')),
+  -- London connections (Paris, Amsterdam already covered)
+  -- Lisbon connections (Barcelona already covered)
+  -- Budapest connections (all already covered)
+  -- (no new edges needed)
+  ((SELECT id FROM locations WHERE name = 'Lisbon'),    (SELECT id FROM locations WHERE name = 'Paris'))
+ON CONFLICT (from_id, to_id) DO NOTHING;
 
 -- ============================================
 -- SEED DATA - Initial Items
@@ -336,7 +376,10 @@ ON CONFLICT DO NOTHING;
 -- Run these to verify your setup worked:
 
 -- Check locations
-SELECT name, latitude, longitude, travel_days FROM locations ORDER BY name;
+SELECT name, latitude, longitude, is_coastal FROM locations ORDER BY name;
+
+-- Check transport types
+SELECT slug, name, speed_kmh, requires_item_slug, requires_coastal FROM transport_types ORDER BY speed_kmh;
 
 -- Check items
 SELECT name, item_type, food_value, water_value, energy_value FROM items ORDER BY item_type, name;

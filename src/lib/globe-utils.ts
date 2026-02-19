@@ -35,6 +35,28 @@ export function getMarkerPosition(
 }
 
 /**
+ * Calculate the great-circle distance between two points given raw
+ * latitude/longitude values.
+ * @param lat1 Latitude of point 1 (degrees)
+ * @param lon1 Longitude of point 1 (degrees)
+ * @param lat2 Latitude of point 2 (degrees)
+ * @param lon2 Longitude of point 2 (degrees)
+ * @returns Distance in kilometres
+ */
+export function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/**
  * Calculate the distance between two locations on Earth
  * Uses the Haversine formula
  * @param loc1 First location (must have latitude and longitude)
@@ -101,4 +123,24 @@ export function calculateGlobeQuaternion(
   const targetDir = targetPos.clone().normalize();
   const cameraDir = new THREE.Vector3(0, 0, 1);
   return new THREE.Quaternion().setFromUnitVectors(targetDir, cameraDir);
+}
+
+/**
+ * Calculate how many radians to rotate the globe per pixel of drag movement.
+ * Uses a surface-locked formula: base rate from FOV + linear scale with camera distance
+ * so dragging feels natural at any zoom level.
+ * @param fovDegrees Camera vertical field of view in degrees
+ * @param viewportHeightPx Canvas height in pixels
+ * @param cameraDistance Camera distance from globe centre
+ * @param calibrationDistance Distance at which the feel was tuned (default 4)
+ */
+export function calculateDragRadiansPerPixel(
+  fovDegrees: number,
+  viewportHeightPx: number,
+  cameraDistance: number,
+  calibrationDistance: number = 4
+): number {
+  const halfFovRad = (fovDegrees * Math.PI) / 360;
+  const baseRadiansPerPixel = (2 * Math.tan(halfFovRad)) / viewportHeightPx;
+  return baseRadiansPerPixel * (cameraDistance / calibrationDistance);
 }

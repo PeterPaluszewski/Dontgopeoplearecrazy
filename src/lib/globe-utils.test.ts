@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { describe, expect, it } from 'vitest';
 import {
   calculateDistance,
+  calculateDragRadiansPerPixel,
   calculateGlobeQuaternion,
   calculateGlobeRotation,
   getMarkerColor,
@@ -243,6 +244,50 @@ describe('globe-utils', () => {
 
     it('should align southern hemisphere', () => {
       expectQuaternionRotatesToCamera(-33.8688, 151.2093);
+    });
+  });
+
+  describe('calculateDragRadiansPerPixel', () => {
+    // These tests lock in the current calibrated formula.
+    // If the drag feel needs changing, update these values intentionally.
+    const FOV = 75;       // degrees — matches PerspectiveCamera default
+    const HEIGHT = 600;   // pixels — representative viewport height
+
+    it('should return the calibrated value at zoom 4 (tuning reference point)', () => {
+      const result = calculateDragRadiansPerPixel(FOV, HEIGHT, 4);
+      // 2 * tan(37.5°) / 600 * (4/4) — tan(37.5°) ≈ 0.7673, so ≈ 0.002558
+      expect(result).toBeCloseTo(0.002558, 4);
+    });
+
+    it('should be half as fast at zoom 2 (precise close-up control)', () => {
+      const atZoom2 = calculateDragRadiansPerPixel(FOV, HEIGHT, 2);
+      const atZoom4 = calculateDragRadiansPerPixel(FOV, HEIGHT, 4);
+      expect(atZoom2).toBeCloseTo(atZoom4 / 2, 6);
+    });
+
+    it('should be 1.5× faster at zoom 6 (wider sweeps when zoomed out)', () => {
+      const atZoom6 = calculateDragRadiansPerPixel(FOV, HEIGHT, 6);
+      const atZoom4 = calculateDragRadiansPerPixel(FOV, HEIGHT, 4);
+      expect(atZoom6).toBeCloseTo(atZoom4 * 1.5, 6);
+    });
+
+    it('should scale linearly with camera distance', () => {
+      const at4 = calculateDragRadiansPerPixel(FOV, HEIGHT, 4);
+      const at8 = calculateDragRadiansPerPixel(FOV, HEIGHT, 8);
+      expect(at8).toBeCloseTo(at4 * 2, 6);
+    });
+
+    it('should scale inversely with viewport height', () => {
+      const at600 = calculateDragRadiansPerPixel(FOV, 600, 4);
+      const at1200 = calculateDragRadiansPerPixel(FOV, 1200, 4);
+      expect(at1200).toBeCloseTo(at600 / 2, 6);
+    });
+
+    it('should use calibrationDistance parameter to override tuning point', () => {
+      // calibrationDistance=2 means distance=4 is 2× above calibration → 2× faster
+      const defaultAt4 = calculateDragRadiansPerPixel(FOV, HEIGHT, 4, 4);
+      const customAt4 = calculateDragRadiansPerPixel(FOV, HEIGHT, 4, 2);
+      expect(customAt4).toBeCloseTo(defaultAt4 * 2, 6);
     });
   });
 });

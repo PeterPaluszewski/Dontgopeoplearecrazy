@@ -22,21 +22,21 @@ export default function LocationMarker({
   onHover,
 }: LocationMarkerProps) {
   const groupRef = useRef<THREE.Group>(null);
-  const markerRef = useRef<THREE.Mesh>(null);
   const pulseRef = useRef<THREE.Mesh>(null);
   const { camera } = useThree();
 
-  // Animate current location marker
   useFrame((state) => {
+    // Pulse animation for current location
     if (isCurrent && pulseRef.current) {
       const pulse = Math.sin(state.clock.elapsedTime * 3) * 0.2 + 1;
       pulseRef.current.scale.set(pulse, pulse, pulse);
     }
 
+    // Constant apparent size: scale inversely with camera distance
+    // so the marker subtends the same angle on screen regardless of zoom.
     if (groupRef.current) {
       const distance = camera.position.length();
-      const scale = THREE.MathUtils.clamp(distance / 6, 0.6, 1.6);
-      groupRef.current.scale.setScalar(scale);
+      groupRef.current.scale.setScalar(distance / 6);
     }
   });
 
@@ -47,7 +47,6 @@ export default function LocationMarker({
     <group ref={groupRef} position={position}>
       {/* Main marker pin */}
       <mesh
-        ref={markerRef}
         onClick={(e) => {
           e.stopPropagation();
           onClick();

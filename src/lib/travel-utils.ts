@@ -7,6 +7,17 @@ export interface TravelCost {
 }
 
 /**
+ * Calculate the number of travel days given distance and transport speed.
+ * @param distanceKm Distance in kilometres
+ * @param speedKmh Transport speed in km/h
+ * @returns Number of days, minimum 1
+ */
+export function calculateTravelDays(distanceKm: number, speedKmh: number): number {
+  if (speedKmh <= 0) return 1;
+  return Math.max(1, Math.ceil(distanceKm / speedKmh / 24));
+}
+
+/**
  * Calculate resource costs for traveling to a location
  * Formula: base cost per day * travel days * difficulty multiplier
  * @param travelDays Number of days to travel

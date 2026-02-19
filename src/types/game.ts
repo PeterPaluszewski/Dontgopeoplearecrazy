@@ -1,3 +1,32 @@
+export interface TransportType {
+  id: string;
+  slug: string;
+  name: string;
+  speedKmh: number;
+  baseCostMultiplier: number;
+  requiresItemSlug: string | null;
+  requiresCoastal: boolean;
+}
+
+export interface ConnectionTransportType {
+  id: string;
+  connectionId: string;
+  transportTypeId: string;
+  transportType?: TransportType;
+  isForward: boolean;
+  costMultiplierOverride: number | null;
+}
+
+export interface LocationConnection {
+  id: string;
+  fromId: string;
+  toId: string;
+  distanceKm: number | null;
+  difficultyModifier: number;
+  isBidirectional: boolean;
+  transportOptions?: ConnectionTransportType[];
+}
+
 export interface Location {
   id: string;
   name: string;
@@ -5,7 +34,14 @@ export interface Location {
   latitude: number;
   longitude: number;
   difficultyMultiplier: number;
-  travelDays: number;
+  isCoastal: boolean;
+  /**
+   * Overland region identifier (e.g. 'europe_mainland', 'british_isles', 'north_america').
+   * Two cities in the same region are assumed to be overland-reachable;
+   * different regions require a water crossing.
+   */
+  region: string;
+  /** IDs of directly reachable locations — assembled from the location_connections table */
   connectedLocationIds: string[];
 }
 
