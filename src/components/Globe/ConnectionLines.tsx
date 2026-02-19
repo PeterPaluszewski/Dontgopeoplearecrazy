@@ -8,6 +8,8 @@ import * as THREE from 'three';
 interface ConnectionLinesProps {
   locations: Location[];
   globeRadius: number;
+  highlightedFromId?: string;
+  highlightedToId?: string;
 }
 
 type Segment = {
@@ -56,10 +58,7 @@ export function buildConnectionSegments(
         const t = step / arcSegments;
         const direction = startDir
           .clone()
-          .applyAxisAngle(
-            axisLength > 0 ? rotationAxis : new THREE.Vector3(0, 1, 0),
-            angle * t
-          )
+          .applyAxisAngle(axisLength > 0 ? rotationAxis : new THREE.Vector3(0, 1, 0), angle * t)
           .normalize();
         const radius = globeRadius + lineHeight;
         const point = direction.multiplyScalar(radius);
@@ -75,13 +74,62 @@ export function buildConnectionSegments(
   return results;
 }
 
-export default function ConnectionLines({ locations, globeRadius }: ConnectionLinesProps) {
+/**
+ * Build the arc segments for a single highlighted connection between two locations.
+ * Returns empty array if either ID is missing, the locations don't exist in the
+ * list, or they are not directly connected.
+ */
+export function buildHighlightedSegments(
+  locations: Location[],
+  globeRadius: number,
+  lineHeight: number,
+  arcSegments: number,
+  highlightedFromId: string | undefined,
+  highlightedToId: string | undefined
+): Segment[] {
+  if (!highlightedFromId || !highlightedToId) return [];
+  const from = locations.find((l) => l.id === highlightedFromId);
+  const to = locations.find((l) => l.id === highlightedToId);
+  if (!from || !to) return [];
+  // Accept connections listed on either side — DB data may not be bidirectional
+  const connected =
+    from.connectedLocationIds.includes(highlightedToId) ||
+    to.connectedLocationIds.includes(highlightedFromId);
+  if (!connected) return [];
+  return buildConnectionSegments(
+    [
+      { ...from, connectedLocationIds: [highlightedToId] },
+      { ...to, connectedLocationIds: [] },
+    ],
+    globeRadius,
+    lineHeight + 0.005,
+    arcSegments
+  );
+}
+
+export default function ConnectionLines({
+  locations,
+  globeRadius,
+  highlightedFromId,
+  highlightedToId,
+}: ConnectionLinesProps) {
   const lineHeight = 0.02;
   const arcSegments = 32;
 
   const segments = useMemo<Segment[]>(() => {
     return buildConnectionSegments(locations, globeRadius, lineHeight, arcSegments);
   }, [locations, globeRadius, lineHeight]);
+
+  const highlightedSegments = useMemo<Segment[]>(() => {
+    return buildHighlightedSegments(
+      locations,
+      globeRadius,
+      lineHeight,
+      arcSegments,
+      highlightedFromId,
+      highlightedToId
+    );
+  }, [locations, globeRadius, lineHeight, highlightedFromId, highlightedToId]);
 
   const geometry = useMemo(() => {
     const points: number[] = [];
@@ -101,15 +149,40 @@ export default function ConnectionLines({ locations, globeRadius }: ConnectionLi
     return bufferGeometry;
   }, [segments]);
 
+  const highlightedGeometry = useMemo(() => {
+    const points: number[] = [];
+    highlightedSegments.forEach((segment) => {
+      points.push(
+        segment.start.x,
+        segment.start.y,
+        segment.start.z,
+        segment.end.x,
+        segment.end.y,
+        segment.end.z
+      );
+    });
+    const bufferGeometry = new THREE.BufferGeometry();
+    bufferGeometry.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
+    return bufferGeometry;
+  }, [highlightedSegments]);
+
   useEffect(() => () => geometry.dispose(), [geometry]);
+  useEffect(() => () => highlightedGeometry.dispose(), [highlightedGeometry]);
 
   if (segments.length === 0) {
     return null;
   }
 
   return (
-    <lineSegments geometry={geometry}>
-      <lineBasicMaterial color="#94a3b8" transparent opacity={0.7} />
-    </lineSegments>
+    <>
+      <lineSegments geometry={geometry}>
+        <lineBasicMaterial color="#94a3b8" transparent opacity={0.7} />
+      </lineSegments>
+      {highlightedSegments.length > 0 && (
+        <lineSegments geometry={highlightedGeometry}>
+          <lineBasicMaterial color="#f59e0b" transparent opacity={1} linewidth={2} />
+        </lineSegments>
+      )}
+    </>
   );
 }

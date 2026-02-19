@@ -4,7 +4,7 @@ import { getCompassLabel, getHeadingDegreesFromVector } from '@/lib/compass-util
 import { calculateDragRadiansPerPixel, calculateGlobeQuaternion } from '@/lib/globe-utils';
 import type { Location } from '@/types/game';
 import { OrbitControls, PerspectiveCamera } from '@react-three/drei';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import type { OrbitControls as OrbitControlsType } from 'three-stdlib';
@@ -16,6 +16,7 @@ import LocationMarker from './LocationMarker';
 interface GlobeProps {
   locations: Location[];
   currentLocationId?: string;
+  selectedLocationId?: string;
   visitedLocationIds: string[];
   onLocationClick: (location: Location) => void;
   onDebugUpdate?: (debug: GlobeDebugInfo) => void;
@@ -34,6 +35,7 @@ export interface GlobeDebugInfo {
 export default function Globe({
   locations,
   currentLocationId,
+  selectedLocationId,
   visitedLocationIds,
   onLocationClick,
   onDebugUpdate,
@@ -64,7 +66,6 @@ export default function Globe({
   }, [currentLocationId, locations]);
 
   const DebugProbe = ({ onUpdate }: { onUpdate?: (debug: GlobeDebugInfo) => void }) => {
-    const { camera } = useThree();
     const lastUpdateRef = useRef(0);
     const upVectorRef = useRef(new THREE.Vector3());
     const lastZoomRef = useRef<boolean | null>(null);
@@ -188,7 +189,12 @@ export default function Globe({
           {/* Globe — sphere, connections, borders and markers grouped so they rotate together */}
           <group ref={groupRef}>
             <GlobeSphere />
-            <ConnectionLines locations={locations} globeRadius={2} />
+            <ConnectionLines
+              locations={locations}
+              globeRadius={2}
+              highlightedFromId={currentLocationId}
+              highlightedToId={selectedLocationId}
+            />
             {showBorders && <CountryBordersOverlay globeRadius={2} />}
             {/* Location Markers */}
             {locations.map((location) => (
