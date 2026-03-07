@@ -50,7 +50,7 @@ describe('LocationMarker', () => {
     connectedLocationIds: ['2', '3'],
   };
 
-  let mockOnClick: () => void;
+  let mockOnClick: (ctrlKey: boolean) => void;
   let mockOnHover: (hovered: boolean) => void;
 
   beforeEach(() => {
@@ -63,6 +63,8 @@ describe('LocationMarker', () => {
       location: mockLocation,
       isVisited: false,
       isCurrent: false,
+      isOnRoute: false,
+      isSelected: false,
       onClick: mockOnClick,
       onHover: mockOnHover,
     };
@@ -77,6 +79,8 @@ describe('LocationMarker', () => {
       location: mockLocation,
       isVisited: true,
       isCurrent: true,
+      isOnRoute: false,
+      isSelected: false,
       onClick: mockOnClick,
       onHover: mockOnHover,
     };
@@ -90,6 +94,8 @@ describe('LocationMarker', () => {
       location: mockLocation,
       isVisited: true,
       isCurrent: false,
+      isOnRoute: false,
+      isSelected: false,
       onClick: mockOnClick,
       onHover: mockOnHover,
     };
@@ -103,6 +109,8 @@ describe('LocationMarker', () => {
       location: mockLocation,
       isVisited: false,
       isCurrent: false,
+      isOnRoute: false,
+      isSelected: false,
       onClick: mockOnClick,
       onHover: mockOnHover,
     };
@@ -133,6 +141,8 @@ describe('LocationMarker', () => {
         location={mockLocation}
         isVisited={false}
         isCurrent={false}
+        isOnRoute={false}
+        isSelected={false}
         onClick={mockOnClick}
         onHover={mockOnHover}
       />

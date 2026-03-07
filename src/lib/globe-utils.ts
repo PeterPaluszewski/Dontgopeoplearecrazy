@@ -83,10 +83,18 @@ export function calculateDistance(
 }
 
 /**
- * Get the color for a location marker based on its status
+ * Get the color for a location marker based on its status.
+ * Priority: current > selected > onRoute > visited > unvisited
  */
-export function getMarkerColor(isVisited: boolean, isCurrent: boolean): string {
+export function getMarkerColor(
+  isVisited: boolean,
+  isCurrent: boolean,
+  isSelected = false,
+  isOnRoute = false
+): string {
   if (isCurrent) return '#10b981'; // Green for current location
+  if (isSelected) return '#f59e0b'; // Amber for selected
+  if (isOnRoute) return '#a78bfa'; // Violet for route waypoints
   if (isVisited) return '#3b82f6'; // Blue for visited
   return '#6b7280'; // Gray for unvisited
 }

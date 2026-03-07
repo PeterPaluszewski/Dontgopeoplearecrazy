@@ -41,8 +41,8 @@ vi.mock('./CountryBordersOverlay', () => ({
 }));
 
 vi.mock('./LocationMarker', () => ({
-  default: ({ location, onClick }: { location: Location; onClick: () => void }) => (
-    <div data-testid={`marker-${location.id}`} onClick={onClick}>
+  default: ({ location, onClick }: { location: Location; onClick: (ctrlKey: boolean) => void }) => (
+    <div data-testid={`marker-${location.id}`} onClick={() => onClick(false)}>
       {location.name}
     </div>
   ),
@@ -93,6 +93,7 @@ describe('Globe', () => {
         locations={mockLocations}
         currentLocationId="1"
         visitedLocationIds={['1']}
+        routeLocationIds={[]}
         onLocationClick={mockOnLocationClick}
       />
     );
@@ -106,6 +107,7 @@ describe('Globe', () => {
         locations={mockLocations}
         currentLocationId="1"
         visitedLocationIds={['1']}
+        routeLocationIds={[]}
         onLocationClick={mockOnLocationClick}
       />
     );
@@ -119,6 +121,7 @@ describe('Globe', () => {
         locations={mockLocations}
         currentLocationId="1"
         visitedLocationIds={['1']}
+        routeLocationIds={[]}
         onLocationClick={mockOnLocationClick}
       />
     );
@@ -132,6 +135,7 @@ describe('Globe', () => {
         locations={mockLocations}
         currentLocationId="1"
         visitedLocationIds={['1']}
+        routeLocationIds={[]}
         onLocationClick={mockOnLocationClick}
       />
     );
@@ -147,6 +151,7 @@ describe('Globe', () => {
         locations={mockLocations}
         currentLocationId="1"
         visitedLocationIds={['1']}
+        routeLocationIds={[]}
         onLocationClick={mockOnLocationClick}
       />
     );
@@ -160,13 +165,14 @@ describe('Globe', () => {
         locations={mockLocations}
         currentLocationId="1"
         visitedLocationIds={['1']}
+        routeLocationIds={[]}
         onLocationClick={mockOnLocationClick}
       />
     );
 
     expect(screen.getByText(/Drag to rotate/i)).toBeInTheDocument();
     expect(screen.getByText(/Scroll to zoom/i)).toBeInTheDocument();
-    expect(screen.getByText(/Click markers to select location/i)).toBeInTheDocument();
+    expect(screen.getByText(/Click markers to select/i)).toBeInTheDocument();
   });
 
   it('should handle empty locations array', () => {
@@ -175,6 +181,7 @@ describe('Globe', () => {
         locations={[]}
         currentLocationId={undefined}
         visitedLocationIds={[]}
+        routeLocationIds={[]}
         onLocationClick={mockOnLocationClick}
       />
     );
@@ -189,6 +196,7 @@ describe('Globe', () => {
         locations={mockLocations}
         currentLocationId="1"
         visitedLocationIds={['1']}
+        routeLocationIds={[]}
         onLocationClick={mockOnLocationClick}
       />
     );
@@ -196,7 +204,7 @@ describe('Globe', () => {
     const parisMarker = screen.getByTestId('marker-1');
     parisMarker.click();
 
-    expect(mockOnLocationClick).toHaveBeenCalledWith(mockLocations[0]);
+    expect(mockOnLocationClick).toHaveBeenCalledWith(mockLocations[0], false);
   });
 
   it('should handle locations without currentLocationId', () => {
@@ -205,6 +213,7 @@ describe('Globe', () => {
         locations={mockLocations}
         currentLocationId={undefined}
         visitedLocationIds={[]}
+        routeLocationIds={[]}
         onLocationClick={mockOnLocationClick}
       />
     );
@@ -221,6 +230,7 @@ describe('Globe', () => {
         locations={mockLocations}
         currentLocationId="1"
         visitedLocationIds={['1', '2']}
+        routeLocationIds={[]}
         onLocationClick={mockOnLocationClick}
       />
     );
@@ -235,6 +245,7 @@ describe('Globe', () => {
         locations={mockLocations}
         currentLocationId="2"
         visitedLocationIds={['1', '2', '3']}
+        routeLocationIds={[]}
         onLocationClick={mockOnLocationClick}
       />
     );

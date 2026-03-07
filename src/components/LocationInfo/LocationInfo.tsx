@@ -5,9 +5,14 @@ import { MapPin } from 'lucide-react';
 interface LocationInfoProps {
   location: Location | null;
   onTravelClick?: (location: Location) => void;
+  isReachable?: boolean;
 }
 
-export default function LocationInfo({ location, onTravelClick }: LocationInfoProps) {
+export default function LocationInfo({
+  location,
+  onTravelClick,
+  isReachable = false,
+}: LocationInfoProps) {
   const { visitedLocationIds, currentLocationId } = useGameStore();
 
   if (!location) {
@@ -22,7 +27,7 @@ export default function LocationInfo({ location, onTravelClick }: LocationInfoPr
   const isNew = !isVisited;
   const isCurrent = currentLocationId === location.id;
 
-  const canTravel = !isCurrent && onTravelClick;
+  const canTravel = !isCurrent && onTravelClick && isReachable;
 
   return (
     <div className="bg-gray-800/95 rounded-lg p-4 shadow-xl border border-gray-700 backdrop-blur-sm">
@@ -73,19 +78,21 @@ export default function LocationInfo({ location, onTravelClick }: LocationInfoPr
         </div>
       )}
 
-      {canTravel && (
+      {!isCurrent && onTravelClick && (
         <div className="mt-4">
           <button
-            onClick={() => onTravelClick(location)}
+            onClick={() => {
+              if (canTravel) onTravelClick(location);
+            }}
             className={`w-full py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
-              isCurrent
-                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+              canTravel
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-gray-700 text-gray-500 cursor-not-allowed'
             }`}
-            disabled={isCurrent}
+            disabled={!canTravel}
           >
             <MapPin className="w-5 h-5" />
-            {isCurrent ? 'Current Location' : 'Travel Here'}
+            Travel Here
           </button>
         </div>
       )}

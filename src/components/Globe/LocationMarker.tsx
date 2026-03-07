@@ -10,7 +10,9 @@ interface LocationMarkerProps {
   location: Location;
   isVisited: boolean;
   isCurrent: boolean;
-  onClick: () => void;
+  isOnRoute: boolean;
+  isSelected: boolean;
+  onClick: (ctrlKey: boolean) => void;
   onHover: (hovered: boolean) => void;
 }
 
@@ -18,6 +20,8 @@ export default function LocationMarker({
   location,
   isVisited,
   isCurrent,
+  isOnRoute,
+  isSelected,
   onClick,
   onHover,
 }: LocationMarkerProps) {
@@ -41,7 +45,7 @@ export default function LocationMarker({
   });
 
   const position = getMarkerPosition(location.latitude, location.longitude, 2);
-  const color = getMarkerColor(isVisited, isCurrent);
+  const color = getMarkerColor(isVisited, isCurrent, isSelected, isOnRoute);
 
   return (
     <group ref={groupRef} position={position}>
@@ -49,7 +53,7 @@ export default function LocationMarker({
       <mesh
         onClick={(e) => {
           e.stopPropagation();
-          onClick();
+          onClick(e.nativeEvent.ctrlKey || e.nativeEvent.metaKey);
         }}
         onPointerEnter={() => onHover(true)}
         onPointerLeave={() => onHover(false)}
@@ -63,6 +67,14 @@ export default function LocationMarker({
         <mesh ref={pulseRef}>
           <ringGeometry args={[0.04, 0.05, 32]} />
           <meshBasicMaterial color={color} transparent opacity={0.6} side={THREE.DoubleSide} />
+        </mesh>
+      )}
+
+      {/* Static ring for selected or route-waypoint markers */}
+      {(isSelected || isOnRoute) && !isCurrent && (
+        <mesh>
+          <ringGeometry args={[0.04, 0.05, 32]} />
+          <meshBasicMaterial color={color} transparent opacity={0.8} side={THREE.DoubleSide} />
         </mesh>
       )}
 
