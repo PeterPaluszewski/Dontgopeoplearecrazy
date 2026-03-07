@@ -78,12 +78,12 @@ describe('travel-utils', () => {
     });
 
     it('should scale money cost with baseCostMultiplier', () => {
-      // baseCostMultiplier=2, 1 day, difficulty 1 → money = ceil(10 * 1 * 2) = 20
+      // baseCostMultiplier=2, 1 day → money = ceil(20*2 + 5*1*2) = ceil(50) = 50
       const cost = calculateTravelCost(1, 1, 2);
-      expect(cost.money).toBe(20);
-      // baseCostMultiplier=1.5, 3 days → money = ceil(10 * 3 * 1.5) = 45
+      expect(cost.money).toBe(50);
+      // baseCostMultiplier=1.5, 3 days → money = ceil(20*1.5 + 5*3*1.5) = ceil(52.5) = 53
       const cost2 = calculateTravelCost(3, 1, 1.5);
-      expect(cost2.money).toBe(45);
+      expect(cost2.money).toBe(53);
     });
   });
 

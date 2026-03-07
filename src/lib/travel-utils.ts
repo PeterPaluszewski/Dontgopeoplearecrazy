@@ -120,19 +120,38 @@ export function calculateTravelDays(distanceKm: number, speedKmh: number): numbe
 }
 
 /**
- * Base money cost per in-game day of travel (at baseCostMultiplier = 1).
- * e.g. a car trip with multiplier 2 costs 2× this per day.
- * Walking (multiplier 0) is free.
+ * Flat booking/ticket cost per journey, scaled by baseCostMultiplier.
+ * Ensures fast transport (plane) stays expensive even over short distances,
+ * because the fare is paid regardless of travel time.
+ * Walking/free transport (multiplier 0) incurs no flat fare.
  */
-export const BASE_MONEY_COST_PER_DAY = 10;
+export const BASE_FARE = 20;
+
+/**
+ * Additional per-day cost on top of the flat fare, scaled by baseCostMultiplier.
+ * Covers en-route expenses (food on board, fuel share, etc.).
+ */
+export const BASE_MONEY_RATE_PER_DAY = 5;
 
 /**
  * Calculate resource costs for traveling to a location.
- * Formula: base cost per day * travel days * difficulty multiplier
- * Money cost: BASE_MONEY_COST_PER_DAY * travel days * baseCostMultiplier
+ *
+ * Food/water/energy scale purely with travel days and destination difficulty —
+ * they represent physical exertion and consumption regardless of transport mode.
+ *
+ * Money uses a two-part model so that fast-but-expensive transport (plane) and
+ * slow-but-cheap transport (walking) both price correctly:
+ *
+ *   money = ceil( BASE_FARE × m + BASE_MONEY_RATE_PER_DAY × travelDays × m )
+ *
+ * where m = baseCostMultiplier (0 = free, 1 = budget, 5 = luxury/air).
+ *
+ * Examples at m=5 (plane, 0.2 days):  ceil(20×5 + 5×0.2×5) = €105
+ * Examples at m=1.5 (ship, 6 days):   ceil(20×1.5 + 5×6×1.5) = €75
+ *
  * @param travelDays Fractional travel days
  * @param difficulty Difficulty rating of the destination (1–5)
- * @param baseCostMultiplier Transport cost multiplier (0 = free/walking, 1 = normal, higher = expensive)
+ * @param baseCostMultiplier Transport cost tier (0 = free/walking, 1 = budget, higher = expensive)
  * @returns Resource costs for the journey
  */
 export function calculateTravelCost(
@@ -152,7 +171,9 @@ export function calculateTravelCost(
     food: Math.ceil(baseFoodCost * travelDays * difficultyMultiplier),
     water: Math.ceil(baseWaterCost * travelDays * difficultyMultiplier),
     energy: Math.ceil(baseEnergyCost * travelDays * difficultyMultiplier),
-    money: Math.ceil(BASE_MONEY_COST_PER_DAY * travelDays * baseCostMultiplier),
+    money: Math.ceil(
+      BASE_FARE * baseCostMultiplier + BASE_MONEY_RATE_PER_DAY * travelDays * baseCostMultiplier
+    ),
   };
 }
 

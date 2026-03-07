@@ -248,8 +248,8 @@ describe('TravelModal', () => {
     render(<TravelModal {...multiOptionProps()} />);
     // Train is faster (200 kmh) so it is the default — its costs should be shown in detail section
     // train: 720/200/8 = 0.45 day; difficulty 2 = x1.25; baseCostMultiplier 1
-    // money: ceil(10 * 0.45 * 1) = 5
-    expect(screen.getByText(/€5/)).toBeInTheDocument();
+    // money: ceil(20*1 + 5*0.45*1) = ceil(22.25) = 23
+    expect(screen.getByText(/€23/)).toBeInTheDocument();
   });
 
   it('should update cost breakdown when a different transport is selected', () => {
