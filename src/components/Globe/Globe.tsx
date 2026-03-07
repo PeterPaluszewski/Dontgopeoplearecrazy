@@ -198,6 +198,8 @@ export default function Globe({
             <ConnectionLines
               locations={locations}
               globeRadius={2}
+              currentLocationId={currentLocationId}
+              selectedLocationId={selectedLocationId}
               highlightedFromId={currentLocationId}
               highlightedToId={selectedLocationId}
             />

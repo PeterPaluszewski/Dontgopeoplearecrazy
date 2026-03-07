@@ -8,6 +8,8 @@ import * as THREE from 'three';
 interface ConnectionLinesProps {
   locations: Location[];
   globeRadius: number;
+  currentLocationId?: string;
+  selectedLocationId?: string;
   highlightedFromId?: string;
   highlightedToId?: string;
 }
@@ -75,6 +77,43 @@ export function buildConnectionSegments(
 }
 
 /**
+ * Build arc segments for all connections that touch the current location.
+ * Returns empty array when currentLocationId is undefined or has no connections.
+ */
+export function buildCurrentLocationSegments(
+  locations: Location[],
+  globeRadius: number,
+  lineHeight: number,
+  arcSegments: number,
+  currentLocationId: string | undefined
+): Segment[] {
+  if (!currentLocationId) return [];
+  const current = locations.find((l) => l.id === currentLocationId);
+  if (!current) return [];
+
+  // Collect all neighbour IDs (connections listed on either side)
+  const neighbourIds = new Set<string>(current.connectedLocationIds);
+  locations.forEach((loc) => {
+    if (loc.connectedLocationIds.includes(currentLocationId)) neighbourIds.add(loc.id);
+  });
+
+  if (neighbourIds.size === 0) return [];
+
+  // Build a minimal location list: current + all neighbours
+  const locationMap = new Map(locations.map((l) => [l.id, l]));
+  const subset: Location[] = [current];
+  neighbourIds.forEach((id) => {
+    const loc = locationMap.get(id);
+    if (loc) subset.push({ ...loc, connectedLocationIds: [currentLocationId] });
+  });
+
+  // current needs its connectedLocationIds to match the subset we built
+  subset[0] = { ...current, connectedLocationIds: Array.from(neighbourIds) };
+
+  return buildConnectionSegments(subset, globeRadius, lineHeight, arcSegments);
+}
+
+/**
  * Build the arc segments for a single highlighted connection between two locations.
  * Returns empty array if either ID is missing, the locations don't exist in the
  * list, or they are not directly connected.
@@ -110,6 +149,8 @@ export function buildHighlightedSegments(
 export default function ConnectionLines({
   locations,
   globeRadius,
+  currentLocationId,
+  selectedLocationId,
   highlightedFromId,
   highlightedToId,
 }: ConnectionLinesProps) {
@@ -117,8 +158,12 @@ export default function ConnectionLines({
   const arcSegments = 32;
 
   const segments = useMemo<Segment[]>(() => {
-    return buildConnectionSegments(locations, globeRadius, lineHeight, arcSegments);
-  }, [locations, globeRadius, lineHeight]);
+    // When a location is selected, show its connections as the base layer
+    // so the player can see where they could go next from that city.
+    // Falls back to current location connections when nothing is selected.
+    const focalId = selectedLocationId ?? currentLocationId;
+    return buildCurrentLocationSegments(locations, globeRadius, lineHeight, arcSegments, focalId);
+  }, [locations, globeRadius, lineHeight, currentLocationId, selectedLocationId]);
 
   const highlightedSegments = useMemo<Segment[]>(() => {
     return buildHighlightedSegments(
@@ -169,7 +214,7 @@ export default function ConnectionLines({
   useEffect(() => () => geometry.dispose(), [geometry]);
   useEffect(() => () => highlightedGeometry.dispose(), [highlightedGeometry]);
 
-  if (segments.length === 0) {
+  if (segments.length === 0 && highlightedSegments.length === 0) {
     return null;
   }
 

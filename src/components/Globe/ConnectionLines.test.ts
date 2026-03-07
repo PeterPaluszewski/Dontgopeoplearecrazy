@@ -1,6 +1,10 @@
 import type { Location } from '@/types/game';
 import { describe, expect, it } from 'vitest';
-import { buildConnectionSegments, buildHighlightedSegments } from './ConnectionLines';
+import {
+  buildConnectionSegments,
+  buildCurrentLocationSegments,
+  buildHighlightedSegments,
+} from './ConnectionLines';
 
 const baseLocation: Location = {
   id: '1',
@@ -76,6 +80,209 @@ describe('buildConnectionSegments', () => {
       expect(Math.abs(startRadius - targetRadius)).toBeLessThan(1e-6);
       expect(Math.abs(endRadius - targetRadius)).toBeLessThan(1e-6);
     });
+  });
+});
+
+describe('buildCurrentLocationSegments', () => {
+  const arcSegments = 16;
+  const globeRadius = 2;
+  const lineHeight = 0.02;
+
+  const locA: Location = {
+    ...baseLocation,
+    id: 'a',
+    name: 'A',
+    latitude: 0,
+    longitude: 0,
+    connectedLocationIds: ['b', 'c'],
+  };
+  const locB: Location = {
+    ...baseLocation,
+    id: 'b',
+    name: 'B',
+    latitude: 0,
+    longitude: 90,
+    connectedLocationIds: ['a'],
+  };
+  const locC: Location = {
+    ...baseLocation,
+    id: 'c',
+    name: 'C',
+    latitude: 45,
+    longitude: 45,
+    connectedLocationIds: ['a'],
+  };
+  const locD: Location = {
+    ...baseLocation,
+    id: 'd',
+    name: 'D',
+    latitude: -30,
+    longitude: 120,
+    connectedLocationIds: [], // no connection to A
+  };
+
+  const locations = [locA, locB, locC, locD];
+
+  it('returns empty array when currentLocationId is undefined', () => {
+    expect(
+      buildCurrentLocationSegments(locations, globeRadius, lineHeight, arcSegments, undefined)
+    ).toHaveLength(0);
+  });
+
+  it('returns empty array when currentLocationId does not exist in list', () => {
+    expect(
+      buildCurrentLocationSegments(locations, globeRadius, lineHeight, arcSegments, 'missing')
+    ).toHaveLength(0);
+  });
+
+  it('returns empty array when current location has no connections', () => {
+    expect(
+      buildCurrentLocationSegments(locations, globeRadius, lineHeight, arcSegments, 'd')
+    ).toHaveLength(0);
+  });
+
+  it('only draws connections touching the current location', () => {
+    // A connects to B and C → 2 arcs × arcSegments segments each
+    const segments = buildCurrentLocationSegments(
+      locations,
+      globeRadius,
+      lineHeight,
+      arcSegments,
+      'a'
+    );
+    expect(segments).toHaveLength(2 * arcSegments);
+  });
+
+  it('includes connections listed only on the neighbour side', () => {
+    // E lists A, but A does not list E — should still appear
+    const locE: Location = {
+      ...baseLocation,
+      id: 'e',
+      name: 'E',
+      latitude: -45,
+      longitude: -90,
+      connectedLocationIds: ['a'],
+    };
+    const extendedLocations = [...locations, locE];
+    const segments = buildCurrentLocationSegments(
+      extendedLocations,
+      globeRadius,
+      lineHeight,
+      arcSegments,
+      'a'
+    );
+    // A→B, A→C (from A's list) + A→E (from E's list) = 3 arcs
+    expect(segments).toHaveLength(3 * arcSegments);
+  });
+
+  it('does not draw connections between two non-current locations', () => {
+    // B and C are both neighbours of A but not connected to each other —
+    // segments for B→C must NOT appear
+    const locBConnectedToC: Location = { ...locB, connectedLocationIds: ['a', 'c'] };
+    const locCConnectedToB: Location = { ...locC, connectedLocationIds: ['a', 'b'] };
+    const mixed = [locA, locBConnectedToC, locCConnectedToB, locD];
+    const segments = buildCurrentLocationSegments(mixed, globeRadius, lineHeight, arcSegments, 'a');
+    // Still only A→B and A→C, not B→C
+    expect(segments).toHaveLength(2 * arcSegments);
+  });
+});
+
+describe('buildCurrentLocationSegments – selected location as focal point', () => {
+  // Simulate the component-level logic: focalId = selectedLocationId ?? currentLocationId
+  // A (current) → B, C
+  // B → A, D
+  const arcSegments = 16;
+  const globeRadius = 2;
+  const lineHeight = 0.02;
+
+  const locA: Location = {
+    ...baseLocation,
+    id: 'a',
+    name: 'A',
+    latitude: 0,
+    longitude: 0,
+    connectedLocationIds: ['b', 'c'],
+  };
+  const locB: Location = {
+    ...baseLocation,
+    id: 'b',
+    name: 'B',
+    latitude: 0,
+    longitude: 90,
+    connectedLocationIds: ['a', 'd'],
+  };
+  const locC: Location = {
+    ...baseLocation,
+    id: 'c',
+    name: 'C',
+    latitude: 45,
+    longitude: 45,
+    connectedLocationIds: ['a'],
+  };
+  const locD: Location = {
+    ...baseLocation,
+    id: 'd',
+    name: 'D',
+    latitude: -30,
+    longitude: 120,
+    connectedLocationIds: ['b'],
+  };
+
+  const locations = [locA, locB, locC, locD];
+
+  it('falls back to current location when selectedLocationId is undefined', () => {
+    // Component uses: focalId = selectedLocationId ?? currentLocationId
+    // When selectedLocationId is undefined, focalId = currentLocationId = 'a'
+    const segments = buildCurrentLocationSegments(
+      locations,
+      globeRadius,
+      lineHeight,
+      arcSegments,
+      'a'
+    );
+    // A→B and A→C = 2 arcs
+    expect(segments).toHaveLength(2 * arcSegments);
+  });
+
+  it('shows connections from the selected location when one is provided', () => {
+    // selectedLocationId = 'b' takes precedence over currentLocationId = 'a'
+    const focalId = 'b';
+    const segments = buildCurrentLocationSegments(
+      locations,
+      globeRadius,
+      lineHeight,
+      arcSegments,
+      focalId
+    );
+    // B→A and B→D = 2 arcs
+    expect(segments).toHaveLength(2 * arcSegments);
+  });
+
+  it('shows the selected location connections even if there is no connection back to current', () => {
+    // D only connects to B (not back to A), selecting D from A should show D's connections
+    const locDOneWay: Location = { ...locD, connectedLocationIds: ['b'] };
+    const focalId = 'd';
+    const segments = buildCurrentLocationSegments(
+      [locA, locB, locC, locDOneWay],
+      globeRadius,
+      lineHeight,
+      arcSegments,
+      focalId
+    );
+    // D→B = 1 arc (D has no connection to A)
+    expect(segments).toHaveLength(1 * arcSegments);
+  });
+
+  it('returns current location connections when selectedLocationId equals currentLocationId', () => {
+    const focalId = 'a'; // same as current
+    const segments = buildCurrentLocationSegments(
+      locations,
+      globeRadius,
+      lineHeight,
+      arcSegments,
+      focalId
+    );
+    expect(segments).toHaveLength(2 * arcSegments);
   });
 });
 
