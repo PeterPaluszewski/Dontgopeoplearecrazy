@@ -11,6 +11,7 @@ import { getAllLocations } from '@/lib/database';
 import { GameEvent, triggerRandomEvent } from '@/lib/events';
 import { calculateGlobeQuaternion } from '@/lib/globe-utils';
 import { findLocationById, getDefaultLocation } from '@/lib/location-utils';
+import { appendToRoute } from '@/lib/route-utils';
 import { createClient } from '@/lib/supabase';
 import { calculateTravelCost } from '@/lib/travel-utils';
 import { useGameStore } from '@/store/gameStore';
@@ -37,6 +38,7 @@ export default function GamePage() {
   const [loading, setLoading] = useState(true);
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [routeLocationIds, setRouteLocationIds] = useState<string[]>([]);
   const [travelModalOpen, setTravelModalOpen] = useState(false);
   const [travelDestination, setTravelDestination] = useState<Location | null>(null);
   const [currentEvent, setCurrentEvent] = useState<GameEvent | null>(null);
@@ -113,8 +115,20 @@ export default function GamePage() {
     router.refresh();
   };
 
-  const handleLocationClick = (location: Location) => {
-    setSelectedLocation(location);
+  const handleLocationClick = (location: Location, ctrlKey: boolean) => {
+    if (ctrlKey && currentLocationId) {
+      // Ctrl+click: attempt to append to the planned route.
+      // The candidate must be directly connected to the current route tail.
+      const next = appendToRoute(locations, routeLocationIds, currentLocationId, location.id);
+      if (next !== routeLocationIds) {
+        setRouteLocationIds(next);
+        setSelectedLocation(location);
+      }
+    } else {
+      // Regular click: clear the route, just select the location.
+      setRouteLocationIds([]);
+      setSelectedLocation(location);
+    }
   };
 
   const handleTravelClick = (destination: Location) => {
@@ -194,6 +208,52 @@ export default function GamePage() {
         {/* Right Panel - Location Info */}
         <div className="absolute top-4 right-4 w-96 z-10">
           <LocationInfo location={selectedLocation} onTravelClick={handleTravelClick} />
+
+          {/* Route Planner Panel — only shown when a route is being built */}
+          {routeLocationIds.length > 0 && (
+            <div className="mt-4 bg-gray-800/95 rounded-lg p-4 shadow-xl border border-violet-700 backdrop-blur-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm font-semibold text-violet-300">🗺️ Planned Route</div>
+                <button
+                  type="button"
+                  className="text-xs text-red-400 hover:text-red-300"
+                  onClick={() => setRouteLocationIds([])}
+                >
+                  Clear
+                </button>
+              </div>
+              <ol className="space-y-1 text-xs text-gray-300">
+                {[currentLocationId, ...routeLocationIds].map((id, index) => {
+                  const loc = locations.find((l) => l.id === id);
+                  const isStart = index === 0;
+                  const isEnd = index === routeLocationIds.length;
+                  return (
+                    <li key={id} className="flex items-center gap-2">
+                      <span
+                        className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                          isStart
+                            ? 'bg-emerald-600 text-white'
+                            : isEnd
+                              ? 'bg-violet-600 text-white'
+                              : 'bg-gray-600 text-gray-200'
+                        }`}
+                      >
+                        {index === 0 ? '📍' : index}
+                      </span>
+                      <span
+                        className={isStart ? 'text-emerald-400' : isEnd ? 'text-violet-300' : ''}
+                      >
+                        {loc?.name ?? id}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+              <p className="mt-3 text-xs text-gray-500">
+                Ctrl+click a connected city to extend the route
+              </p>
+            </div>
+          )}
           <div className="mt-4 bg-gray-800/95 rounded-lg p-4 shadow-xl border border-gray-700 backdrop-blur-sm">
             <div className="flex items-center justify-between mb-3">
               <div className="text-sm font-semibold text-gray-200">Globe Debug</div>
@@ -273,6 +333,7 @@ export default function GamePage() {
           locations={locations}
           currentLocationId={currentLocationId}
           selectedLocationId={selectedLocation?.id}
+          routeLocationIds={routeLocationIds}
           visitedLocationIds={visitedLocationIds}
           onLocationClick={handleLocationClick}
           onDebugUpdate={setGlobeDebug}

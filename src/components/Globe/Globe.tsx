@@ -17,8 +17,9 @@ interface GlobeProps {
   locations: Location[];
   currentLocationId?: string;
   selectedLocationId?: string;
+  routeLocationIds: string[];
   visitedLocationIds: string[];
-  onLocationClick: (location: Location) => void;
+  onLocationClick: (location: Location, ctrlKey: boolean) => void;
   onDebugUpdate?: (debug: GlobeDebugInfo) => void;
 }
 
@@ -36,6 +37,7 @@ export default function Globe({
   locations,
   currentLocationId,
   selectedLocationId,
+  routeLocationIds,
   visitedLocationIds,
   onLocationClick,
   onDebugUpdate,
@@ -200,6 +202,7 @@ export default function Globe({
               globeRadius={2}
               currentLocationId={currentLocationId}
               selectedLocationId={selectedLocationId}
+              routeLocationIds={routeLocationIds}
               highlightedFromId={currentLocationId}
               highlightedToId={selectedLocationId}
             />
@@ -211,7 +214,9 @@ export default function Globe({
                 location={location}
                 isCurrent={location.id === currentLocationId}
                 isVisited={visitedLocationIds.includes(location.id)}
-                onClick={() => onLocationClick(location)}
+                isSelected={location.id === selectedLocationId}
+                isOnRoute={routeLocationIds.includes(location.id)}
+                onClick={(ctrlKey) => onLocationClick(location, ctrlKey)}
                 onHover={(hovered) => setHoveredLocation(hovered ? location : null)}
               />
             ))}
@@ -243,7 +248,8 @@ export default function Globe({
 
       {/* Instructions */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-gray-800/90 text-white px-4 py-2 rounded-lg text-sm">
-        🖱️ Drag to rotate • 🔍 Scroll to zoom • 📍 Click markers to select location
+        🖱️ Drag to rotate • 🔍 Scroll to zoom • 📍 Click markers to select • ⌃ Ctrl+click to plan
+        route
       </div>
     </div>
   );

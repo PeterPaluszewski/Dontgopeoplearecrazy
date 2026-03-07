@@ -10,6 +10,7 @@ interface ConnectionLinesProps {
   globeRadius: number;
   currentLocationId?: string;
   selectedLocationId?: string;
+  routeLocationIds?: string[];
   highlightedFromId?: string;
   highlightedToId?: string;
 }
@@ -114,6 +115,37 @@ export function buildCurrentLocationSegments(
 }
 
 /**
+ * Build arc segments for every leg of a planned route.
+ * The full chain is: currentLocationId → route[0] → route[1] → …
+ * Each consecutive pair is drawn regardless of whether the connection is
+ * bidirectional in the DB (same one-sided acceptance as buildHighlightedSegments).
+ */
+export function buildRouteSegments(
+  locations: Location[],
+  globeRadius: number,
+  lineHeight: number,
+  arcSegments: number,
+  currentLocationId: string | undefined,
+  routeLocationIds: string[]
+): Segment[] {
+  if (!currentLocationId || routeLocationIds.length === 0) return [];
+  const chain = [currentLocationId, ...routeLocationIds];
+  const results: Segment[] = [];
+  for (let i = 0; i < chain.length - 1; i++) {
+    const leg = buildHighlightedSegments(
+      locations,
+      globeRadius,
+      lineHeight,
+      arcSegments,
+      chain[i],
+      chain[i + 1]
+    );
+    results.push(...leg);
+  }
+  return results;
+}
+
+/**
  * Build the arc segments for a single highlighted connection between two locations.
  * Returns empty array if either ID is missing, the locations don't exist in the
  * list, or they are not directly connected.
@@ -151,6 +183,7 @@ export default function ConnectionLines({
   globeRadius,
   currentLocationId,
   selectedLocationId,
+  routeLocationIds = [],
   highlightedFromId,
   highlightedToId,
 }: ConnectionLinesProps) {
@@ -158,14 +191,18 @@ export default function ConnectionLines({
   const arcSegments = 32;
 
   const segments = useMemo<Segment[]>(() => {
-    // When a location is selected, show its connections as the base layer
-    // so the player can see where they could go next from that city.
-    // Falls back to current location connections when nothing is selected.
-    const focalId = selectedLocationId ?? currentLocationId;
+    // Focal point priority: last route waypoint → selected location → current location
+    // This keeps the base-layer connections showing where you can go next from the
+    // furthest point along the planned route.
+    const routeTail =
+      routeLocationIds.length > 0 ? routeLocationIds[routeLocationIds.length - 1] : undefined;
+    const focalId = routeTail ?? selectedLocationId ?? currentLocationId;
     return buildCurrentLocationSegments(locations, globeRadius, lineHeight, arcSegments, focalId);
-  }, [locations, globeRadius, lineHeight, currentLocationId, selectedLocationId]);
+  }, [locations, globeRadius, lineHeight, currentLocationId, selectedLocationId, routeLocationIds]);
 
+  // current → selected arc (first-hop highlight; hidden when a multi-leg route is active)
   const highlightedSegments = useMemo<Segment[]>(() => {
+    if (routeLocationIds.length > 0) return [];
     return buildHighlightedSegments(
       locations,
       globeRadius,
@@ -174,7 +211,19 @@ export default function ConnectionLines({
       highlightedFromId,
       highlightedToId
     );
-  }, [locations, globeRadius, lineHeight, highlightedFromId, highlightedToId]);
+  }, [locations, globeRadius, lineHeight, highlightedFromId, highlightedToId, routeLocationIds]);
+
+  // Full route arcs: current → route[0] → route[1] → …
+  const routeSegments = useMemo<Segment[]>(() => {
+    return buildRouteSegments(
+      locations,
+      globeRadius,
+      lineHeight + 0.005,
+      arcSegments,
+      currentLocationId,
+      routeLocationIds
+    );
+  }, [locations, globeRadius, lineHeight, currentLocationId, routeLocationIds]);
 
   const geometry = useMemo(() => {
     const points: number[] = [];
@@ -211,10 +260,28 @@ export default function ConnectionLines({
     return bufferGeometry;
   }, [highlightedSegments]);
 
+  const routeGeometry = useMemo(() => {
+    const points: number[] = [];
+    routeSegments.forEach((segment) => {
+      points.push(
+        segment.start.x,
+        segment.start.y,
+        segment.start.z,
+        segment.end.x,
+        segment.end.y,
+        segment.end.z
+      );
+    });
+    const bufferGeometry = new THREE.BufferGeometry();
+    bufferGeometry.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
+    return bufferGeometry;
+  }, [routeSegments]);
+
   useEffect(() => () => geometry.dispose(), [geometry]);
   useEffect(() => () => highlightedGeometry.dispose(), [highlightedGeometry]);
+  useEffect(() => () => routeGeometry.dispose(), [routeGeometry]);
 
-  if (segments.length === 0 && highlightedSegments.length === 0) {
+  if (segments.length === 0 && highlightedSegments.length === 0 && routeSegments.length === 0) {
     return null;
   }
 
@@ -226,6 +293,11 @@ export default function ConnectionLines({
       {highlightedSegments.length > 0 && (
         <lineSegments geometry={highlightedGeometry}>
           <lineBasicMaterial color="#f59e0b" transparent opacity={1} linewidth={2} />
+        </lineSegments>
+      )}
+      {routeSegments.length > 0 && (
+        <lineSegments geometry={routeGeometry}>
+          <lineBasicMaterial color="#a78bfa" transparent opacity={1} linewidth={2} />
         </lineSegments>
       )}
     </>

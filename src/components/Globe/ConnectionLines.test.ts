@@ -4,6 +4,7 @@ import {
   buildConnectionSegments,
   buildCurrentLocationSegments,
   buildHighlightedSegments,
+  buildRouteSegments,
 } from './ConnectionLines';
 
 const baseLocation: Location = {
@@ -447,5 +448,73 @@ describe('buildHighlightedSegments', () => {
     const highlightedRadius = highlightedResult[0].start.length();
     expect(highlightedRadius).toBeGreaterThan(regularRadius);
     expect(highlightedRadius).toBeCloseTo(globeRadius + lineHeight + 0.005, 5);
+  });
+});
+
+describe('buildRouteSegments', () => {
+  const arcSegments = 16;
+  const globeRadius = 2;
+  const lineHeight = 0.025; // lineHeight + 0.005 offset applied inside
+
+  const locA: Location = {
+    ...baseLocation,
+    id: 'a',
+    name: 'A',
+    latitude: 0,
+    longitude: 0,
+    connectedLocationIds: ['b'],
+  };
+  const locB: Location = {
+    ...baseLocation,
+    id: 'b',
+    name: 'B',
+    latitude: 0,
+    longitude: 90,
+    connectedLocationIds: ['a', 'c'],
+  };
+  const locC: Location = {
+    ...baseLocation,
+    id: 'c',
+    name: 'C',
+    latitude: 45,
+    longitude: 45,
+    connectedLocationIds: ['b'],
+  };
+
+  const locations = [locA, locB, locC];
+
+  it('returns empty when route is empty', () => {
+    expect(
+      buildRouteSegments(locations, globeRadius, lineHeight, arcSegments, 'a', [])
+    ).toHaveLength(0);
+  });
+
+  it('returns empty when currentLocationId is undefined', () => {
+    expect(
+      buildRouteSegments(locations, globeRadius, lineHeight, arcSegments, undefined, ['b'])
+    ).toHaveLength(0);
+  });
+
+  it('draws one arc for a single-leg route (current → first waypoint)', () => {
+    const segments = buildRouteSegments(locations, globeRadius, lineHeight, arcSegments, 'a', [
+      'b',
+    ]);
+    expect(segments).toHaveLength(arcSegments);
+  });
+
+  it('draws two arcs for a two-leg route (current → wp1 → wp2)', () => {
+    const segments = buildRouteSegments(locations, globeRadius, lineHeight, arcSegments, 'a', [
+      'b',
+      'c',
+    ]);
+    expect(segments).toHaveLength(2 * arcSegments);
+  });
+
+  it('returns empty for a leg whose two cities are not connected', () => {
+    // A and C are not directly connected
+    const segments = buildRouteSegments(locations, globeRadius, lineHeight, arcSegments, 'a', [
+      'c',
+    ]);
+    expect(segments).toHaveLength(0);
   });
 });
