@@ -239,10 +239,10 @@ describe('travel-utils', () => {
     });
 
     it('calculates correct travel days for motorised transport (train)', () => {
-      // train: 1050 km at 200 km/h, 8h/day = 1050/200/8 = 0.656 → ceil = 1 day
+      // train: 1050 km at 200 km/h, 8h/day = 1050/200/8 = 0.65625 fractional days
       const detail = getConnectionDetail(locations, 'paris', 'berlin');
       const days = calculateTravelDays(detail.distanceKm, detail.speedKmh);
-      expect(days).toBe(1);
+      expect(days).toBeCloseTo(0.65625);
       expect(TRAVEL_HOURS_PER_DAY).toBe(8);
     });
 
@@ -251,20 +251,24 @@ describe('travel-utils', () => {
     });
 
     it('calculates multi-day journey for walking distance', () => {
-      // 1050 km on foot at 5 km/h, 8h/day = 1050/5/8 = 26.25 → 27 days
-      expect(calculateTravelDays(1050, 5)).toBe(27);
+      // 1050 km on foot at 5 km/h, 8h/day = 1050/5/8 = 26.25 days
+      expect(calculateTravelDays(1050, 5)).toBeCloseTo(26.25);
     });
 
     it('calculates realistic plane journey days', () => {
-      // London → Tokyo ~9217 km at 800 km/h, 8h/day = 9217/800/8 = 1.44 → 2 days
-      expect(calculateTravelDays(9217, 800)).toBe(2);
-      // Sydney → London ~16546 km at 800 km/h = 16546/800/8 = 2.58 → 3 days
-      expect(calculateTravelDays(16546, 800)).toBe(3);
+      // London → Tokyo ~9217 km at 800 km/h, 8h/day = 9217/800/8 = 1.44
+      expect(calculateTravelDays(9217, 800)).toBeCloseTo(1.44, 1);
+      // Sydney → London ~16546 km at 800 km/h = 16546/800/8 = 2.58
+      expect(calculateTravelDays(16546, 800)).toBeCloseTo(2.58, 1);
     });
 
     it('calculates realistic car journey days', () => {
-      // 365 km at 90 km/h, 8h/day = 365/90/8 = 0.507 → 1 day
-      expect(calculateTravelDays(365, 90)).toBe(1);
+      // 365 km at 90 km/h, 8h/day = 365/90/8 = 0.507
+      expect(calculateTravelDays(365, 90)).toBeCloseTo(0.507, 2);
+    });
+
+    it('returns 0 for zero distance', () => {
+      expect(calculateTravelDays(0, 90)).toBe(0);
     });
   });
 

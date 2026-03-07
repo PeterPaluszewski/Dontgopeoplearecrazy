@@ -88,16 +88,17 @@ export function formatTravelDuration(
 }
 
 /**
- * Calculate the number of travel days given distance and transport speed.
- * Uses ceiling so that even a short journey costs at least 1 day of resources.
- * e.g. plane 800 km/h × 8 h = 6,400 km/day; on foot 5 km/h × 8 h = 40 km/day.
+ * Calculate the (fractional) travel days for clock advancement and resource costs.
+ * Preserves hours within a day so the game clock advances correctly and
+ * resource costs scale proportionally with actual journey time.
+ * e.g. 1050 km at 200 km/h, 8h/day = 0.656 days (≈ 15h 44min of clock time)
  * @param distanceKm Distance in kilometres
  * @param speedKmh Transport speed in km/h
- * @returns Number of days (ceiling), minimum 1
+ * @returns Fractional days, exact value (no rounding)
  */
 export function calculateTravelDays(distanceKm: number, speedKmh: number): number {
-  if (speedKmh <= 0) return 1;
-  return Math.max(1, Math.ceil(distanceKm / speedKmh / TRAVEL_HOURS_PER_DAY));
+  if (speedKmh <= 0) return distanceKm / FALLBACK_SPEED_KMH / TRAVEL_HOURS_PER_DAY;
+  return distanceKm / speedKmh / TRAVEL_HOURS_PER_DAY;
 }
 
 /**
