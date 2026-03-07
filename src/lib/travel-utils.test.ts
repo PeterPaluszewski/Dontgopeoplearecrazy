@@ -2,9 +2,13 @@ import type { Location } from '@/types/game';
 import { describe, expect, it } from 'vitest';
 import {
   calculateTravelCost,
+  calculateTravelDays,
   canAffordTravel,
   canTravelToLocation,
+  formatTravelDuration,
   getConnectionDetail,
+  TRANSPORT_NAMES,
+  TRAVEL_HOURS_PER_DAY,
 } from './travel-utils';
 
 describe('travel-utils', () => {
@@ -222,20 +226,82 @@ describe('travel-utils', () => {
       expect(result.toId).toBe('berlin');
       expect(result.speedKmh).toBe(5);
       expect(result.transportSlug).toBe('on_foot');
+      expect(result.distanceKm).toBe(0); // neither location has coords in this fallback
     });
 
-    it('returns fallback when connection not found on location', () => {
+    it('returns fallback with computed distance when connection not found on location', () => {
+      // paris (48.85, 2.35) → tokyo is not in the locations array so distanceKm = 0
       const result = getConnectionDetail(locations, 'paris', 'tokyo');
       expect(result.toId).toBe('tokyo');
       expect(result.speedKmh).toBe(5);
       expect(result.transportSlug).toBe('on_foot');
+      expect(result.distanceKm).toBe(0); // tokyo not in locations array
     });
 
-    it('calculates correct travel days from returned detail', () => {
-      // 1050 km at 200 km/h / 24h = 0.219 days → ceil = 1 day
+    it('calculates correct travel days for motorised transport (train)', () => {
+      // train: 1050 km at 200 km/h, 8h/day = 1050/200/8 = 0.656 → ceil = 1 day
       const detail = getConnectionDetail(locations, 'paris', 'berlin');
-      const days = Math.max(1, Math.ceil(detail.distanceKm / detail.speedKmh / 24));
+      const days = calculateTravelDays(detail.distanceKm, detail.speedKmh);
       expect(days).toBe(1);
+      expect(TRAVEL_HOURS_PER_DAY).toBe(8);
+    });
+
+    it('returns correct constant for all transport types', () => {
+      expect(TRAVEL_HOURS_PER_DAY).toBe(8);
+    });
+
+    it('calculates multi-day journey for walking distance', () => {
+      // 1050 km on foot at 5 km/h, 8h/day = 1050/5/8 = 26.25 → 27 days
+      expect(calculateTravelDays(1050, 5)).toBe(27);
+    });
+
+    it('calculates realistic plane journey days', () => {
+      // London → Tokyo ~9217 km at 800 km/h, 8h/day = 9217/800/8 = 1.44 → 2 days
+      expect(calculateTravelDays(9217, 800)).toBe(2);
+      // Sydney → London ~16546 km at 800 km/h = 16546/800/8 = 2.58 → 3 days
+      expect(calculateTravelDays(16546, 800)).toBe(3);
+    });
+
+    it('calculates realistic car journey days', () => {
+      // 365 km at 90 km/h, 8h/day = 365/90/8 = 0.507 → 1 day
+      expect(calculateTravelDays(365, 90)).toBe(1);
+    });
+  });
+
+  describe('formatTravelDuration', () => {
+    it('shows days and hours for a multi-day journey', () => {
+      // 9217 km at 800 km/h = 11.52 hours total → 1 day 4 hours (floor(11.52/8)=1, round(11.52%8)=4)
+      expect(formatTravelDuration(9217, 800, 'plane')).toBe('1 day 4 hours by plane');
+    });
+
+    it('shows only hours for a sub-day journey', () => {
+      // 200 km at 90 km/h = 2.22 hours → 0 days, 2 hours
+      expect(formatTravelDuration(200, 90, 'car')).toBe('2 hours by car');
+    });
+
+    it('shows days only when hours remainder is zero', () => {
+      // 720 km at 90 km/h = 8 hours → 1 day, 0 hours remaining
+      expect(formatTravelDuration(720, 90, 'car')).toBe('1 day by car');
+    });
+
+    it('shows "< 1 hour" when journey is very short', () => {
+      // 1 km at 800 km/h = 0.00125 hours → rounds to 0
+      expect(formatTravelDuration(1, 800, 'plane')).toBe('< 1 hour by plane');
+    });
+
+    it('uses on-foot label for on_foot slug', () => {
+      expect(formatTravelDuration(40, 5, 'on_foot')).toBe('1 day on foot');
+    });
+
+    it('falls back to "by <slug>" for unknown transport slugs', () => {
+      expect(formatTravelDuration(100, 50, 'hovercraft')).toContain('by hovercraft');
+    });
+
+    it('TRANSPORT_NAMES covers all common slugs', () => {
+      expect(TRANSPORT_NAMES['plane']).toBe('by plane');
+      expect(TRANSPORT_NAMES['bicycle']).toBe('by bicycle');
+      expect(TRANSPORT_NAMES['on_foot']).toBe('on foot');
+      expect(TRANSPORT_NAMES['cruise_ship']).toBe('by cruise ship');
     });
   });
 });

@@ -1,3 +1,4 @@
+import { formatTravelDuration } from '@/lib/travel-utils';
 import { useGameStore } from '@/store/gameStore';
 import type { Location } from '@/types/game';
 import { MapPin } from 'lucide-react';
@@ -6,12 +7,20 @@ interface LocationInfoProps {
   location: Location | null;
   onTravelClick?: (location: Location) => void;
   isReachable?: boolean;
+  travelDays?: number;
+  travelTransportSlug?: string;
+  travelDistanceKm?: number;
+  travelSpeedKmh?: number;
 }
 
 export default function LocationInfo({
   location,
   onTravelClick,
   isReachable = false,
+  travelDays,
+  travelTransportSlug,
+  travelDistanceKm,
+  travelSpeedKmh,
 }: LocationInfoProps) {
   const { visitedLocationIds, currentLocationId } = useGameStore();
 
@@ -80,6 +89,14 @@ export default function LocationInfo({
 
       {!isCurrent && onTravelClick && (
         <div className="mt-4">
+          {travelDays !== undefined &&
+            travelDistanceKm !== undefined &&
+            travelSpeedKmh !== undefined &&
+            travelTransportSlug !== undefined && (
+              <div className="text-center text-sm text-gray-400 mb-2">
+                🕒 {formatTravelDuration(travelDistanceKm, travelSpeedKmh, travelTransportSlug)}
+              </div>
+            )}
           <button
             onClick={() => {
               if (canTravel) onTravelClick(location);

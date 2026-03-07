@@ -1,3 +1,4 @@
+import { haversineKm } from '@/lib/globe-utils';
 import { ConnectionDetail, Location } from '@/types/game';
 
 export interface TravelCost {
@@ -6,17 +7,22 @@ export interface TravelCost {
   energy: number;
 }
 
-/** Fallback when a connection has no transport data (5 km/h walking). */
-const FALLBACK_CONNECTION: Omit<ConnectionDetail, 'toId'> = {
-  distanceKm: 0,
-  transportSlug: 'on_foot',
-  speedKmh: 5,
-};
+/**
+ * Hours of active travel assumed per in-game day, for all transport types.
+ * A plane covers 800 km/h × 8 h = 6,400 km/day; a walker covers 5 × 8 = 40 km/day.
+ * Using the same constant keeps the model simple and gives meaningful multi-day results
+ * even for fast transport over very long distances.
+ */
+export const TRAVEL_HOURS_PER_DAY = 8;
+
+/** Fallback transport slug/speed when a connection has no transport data (5 km/h walking). */
+const FALLBACK_SPEED_KMH = 5;
+const FALLBACK_TRANSPORT_SLUG = 'on_foot';
 
 /**
  * Find the pre-loaded ConnectionDetail for a specific from→to leg.
- * Returns a fallback (walking, 0 km) if the locations array doesn't have
- * connection data — this keeps tests simple and handles legacy saves.
+ * If the connection isn't in the loaded data, calculates distance from
+ * coordinates (haversine) and falls back to walking speed.
  */
 export function getConnectionDetail(
   locations: Location[],
@@ -28,18 +34,70 @@ export function getConnectionDetail(
     const detail = from.connections.find((c) => c.toId === toId);
     if (detail) return detail;
   }
-  return { toId, ...FALLBACK_CONNECTION };
+
+  // Compute distance from coordinates so travel days aren't always 1.
+  const fromLoc = locations.find((l) => l.id === fromId);
+  const toLoc = locations.find((l) => l.id === toId);
+  const distanceKm =
+    fromLoc && toLoc
+      ? haversineKm(fromLoc.latitude, fromLoc.longitude, toLoc.latitude, toLoc.longitude)
+      : 0;
+
+  return { toId, distanceKm, transportSlug: FALLBACK_TRANSPORT_SLUG, speedKmh: FALLBACK_SPEED_KMH };
+}
+
+/** Maps a transport slug to a readable name shown in the UI. */
+export const TRANSPORT_NAMES: Record<string, string> = {
+  on_foot: 'on foot',
+  bicycle: 'by bicycle',
+  rickshaw: 'by rickshaw',
+  tuk_tuk: 'by tuk-tuk',
+  hitchhike: 'by hitchhike',
+  car: 'by car',
+  bus: 'by bus',
+  train: 'by train',
+  ferry: 'by ferry',
+  sailboat: 'by sailboat',
+  freight_ship: 'by freight ship',
+  cruise_ship: 'by cruise ship',
+  plane: 'by plane',
+};
+
+/**
+ * Format a journey duration as a human-readable string with optional transport name.
+ * e.g. "2 days 4 hours by plane", "6 hours by train", "1 day on foot".
+ */
+export function formatTravelDuration(
+  distanceKm: number,
+  speedKmh: number,
+  transportSlug: string
+): string {
+  const totalHours = speedKmh > 0 ? distanceKm / speedKmh : distanceKm / FALLBACK_SPEED_KMH;
+  const days = Math.floor(totalHours / TRAVEL_HOURS_PER_DAY);
+  const remainingHours = Math.round(totalHours % TRAVEL_HOURS_PER_DAY);
+
+  const transportName = TRANSPORT_NAMES[transportSlug] ?? `by ${transportSlug}`;
+
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days} ${days === 1 ? 'day' : 'days'}`);
+  if (remainingHours > 0)
+    parts.push(`${remainingHours} ${remainingHours === 1 ? 'hour' : 'hours'}`);
+  if (parts.length === 0) parts.push('< 1 hour');
+
+  return `${parts.join(' ')} ${transportName}`;
 }
 
 /**
  * Calculate the number of travel days given distance and transport speed.
+ * Uses ceiling so that even a short journey costs at least 1 day of resources.
+ * e.g. plane 800 km/h × 8 h = 6,400 km/day; on foot 5 km/h × 8 h = 40 km/day.
  * @param distanceKm Distance in kilometres
  * @param speedKmh Transport speed in km/h
- * @returns Number of days, minimum 1
+ * @returns Number of days (ceiling), minimum 1
  */
 export function calculateTravelDays(distanceKm: number, speedKmh: number): number {
   if (speedKmh <= 0) return 1;
-  return Math.max(1, Math.ceil(distanceKm / speedKmh / 24));
+  return Math.max(1, Math.ceil(distanceKm / speedKmh / TRAVEL_HOURS_PER_DAY));
 }
 
 /**

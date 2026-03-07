@@ -30,6 +30,9 @@ describe('TravelModal', () => {
   const defaultProps = () => ({
     destination: mockDestination,
     travelDays: 1,
+    travelDistanceKm: 200,
+    travelSpeedKmh: 90,
+    travelTransportSlug: 'car',
     isOpen: true,
     onClose: mockOnClose,
     onConfirm: mockOnConfirm,

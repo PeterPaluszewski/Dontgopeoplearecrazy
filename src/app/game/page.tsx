@@ -252,6 +252,34 @@ export default function GamePage() {
               selectedLocation.id !== currentLocationId &&
               areDirectlyConnected(locations, currentLocationId, selectedLocation.id)
             }
+            travelDays={
+              currentLocationId && selectedLocation && selectedLocation.id !== currentLocationId
+                ? (() => {
+                    const conn = getConnectionDetail(
+                      locations,
+                      currentLocationId,
+                      selectedLocation.id
+                    );
+                    return calculateTravelDays(conn.distanceKm, conn.speedKmh);
+                  })()
+                : undefined
+            }
+            travelDistanceKm={
+              currentLocationId && selectedLocation && selectedLocation.id !== currentLocationId
+                ? getConnectionDetail(locations, currentLocationId, selectedLocation.id).distanceKm
+                : undefined
+            }
+            travelSpeedKmh={
+              currentLocationId && selectedLocation && selectedLocation.id !== currentLocationId
+                ? getConnectionDetail(locations, currentLocationId, selectedLocation.id).speedKmh
+                : undefined
+            }
+            travelTransportSlug={
+              currentLocationId && selectedLocation && selectedLocation.id !== currentLocationId
+                ? getConnectionDetail(locations, currentLocationId, selectedLocation.id)
+                    .transportSlug
+                : undefined
+            }
           />
 
           {/* Route Planner Panel — only shown when a route is being built */}
@@ -406,6 +434,9 @@ export default function GamePage() {
               <TravelModal
                 destination={travelDestination}
                 travelDays={days}
+                travelDistanceKm={conn.distanceKm}
+                travelSpeedKmh={conn.speedKmh}
+                travelTransportSlug={conn.transportSlug}
                 isOpen={travelModalOpen}
                 onClose={() => setTravelModalOpen(false)}
                 onConfirm={handleTravelConfirm}

@@ -1,6 +1,6 @@
 'use client';
 
-import { calculateTravelCost, canAffordTravel } from '@/lib/travel-utils';
+import { calculateTravelCost, canAffordTravel, formatTravelDuration } from '@/lib/travel-utils';
 import { useGameStore } from '@/store/gameStore';
 import { Location } from '@/types/game';
 import { AlertTriangle, ChevronRight, MapPin, X } from 'lucide-react';
@@ -8,6 +8,9 @@ import { AlertTriangle, ChevronRight, MapPin, X } from 'lucide-react';
 interface TravelModalProps {
   destination: Location;
   travelDays: number;
+  travelDistanceKm: number;
+  travelSpeedKmh: number;
+  travelTransportSlug: string;
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
@@ -46,6 +49,9 @@ function ResourceCost({ label, current, cost, icon }: ResourceCostProps) {
 export default function TravelModal({
   destination,
   travelDays,
+  travelDistanceKm,
+  travelSpeedKmh,
+  travelTransportSlug,
   isOpen,
   onClose,
   onConfirm,
@@ -73,7 +79,7 @@ export default function TravelModal({
             <div>
               <h2 className="text-lg font-bold text-white">Travel to {destination.name}</h2>
               <p className="text-xs text-gray-400">
-                {travelDays} {travelDays === 1 ? 'day' : 'days'} journey
+                {formatTravelDuration(travelDistanceKm, travelSpeedKmh, travelTransportSlug)}
               </p>
             </div>
           </div>
