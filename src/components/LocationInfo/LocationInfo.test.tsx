@@ -167,4 +167,79 @@ describe('LocationInfo', () => {
 
     expect(screen.getByText('-33.87°, -151.21°')).toBeInTheDocument();
   });
+
+  it('should not show Travel Here button when onTravelClick is not provided', () => {
+    vi.mocked(useGameStore).mockReturnValue({
+      visitedLocationIds: [],
+      currentLocationId: 'other',
+    } as ReturnType<typeof useGameStore>);
+
+    render(<LocationInfo location={mockLocation} isReachable={true} />);
+
+    expect(screen.queryByText('Travel Here')).not.toBeInTheDocument();
+  });
+
+  it('should show Travel Here button disabled when isReachable is false', () => {
+    vi.mocked(useGameStore).mockReturnValue({
+      visitedLocationIds: [],
+      currentLocationId: 'other',
+    } as ReturnType<typeof useGameStore>);
+
+    const onTravelClick = vi.fn();
+    render(
+      <LocationInfo location={mockLocation} onTravelClick={onTravelClick} isReachable={false} />
+    );
+
+    const button = screen.getByRole('button', { name: /Travel Here/i });
+    expect(button).toBeDisabled();
+  });
+
+  it('should show Travel Here button enabled when isReachable is true', () => {
+    vi.mocked(useGameStore).mockReturnValue({
+      visitedLocationIds: [],
+      currentLocationId: 'other',
+    } as ReturnType<typeof useGameStore>);
+
+    const onTravelClick = vi.fn();
+    render(
+      <LocationInfo location={mockLocation} onTravelClick={onTravelClick} isReachable={true} />
+    );
+
+    const button = screen.getByRole('button', { name: /Travel Here/i });
+    expect(button).not.toBeDisabled();
+  });
+
+  it('should not show Travel Here button when location is current', () => {
+    vi.mocked(useGameStore).mockReturnValue({
+      visitedLocationIds: ['1'],
+      currentLocationId: '1',
+    } as ReturnType<typeof useGameStore>);
+
+    const onTravelClick = vi.fn();
+    render(
+      <LocationInfo location={mockLocation} onTravelClick={onTravelClick} isReachable={true} />
+    );
+
+    expect(screen.queryByText('Travel Here')).not.toBeInTheDocument();
+  });
+
+  it('should show "Travel to {name}" when nextLocationName is provided', () => {
+    vi.mocked(useGameStore).mockReturnValue({
+      visitedLocationIds: [],
+      currentLocationId: 'other',
+    } as ReturnType<typeof useGameStore>);
+
+    const onTravelClick = vi.fn();
+    render(
+      <LocationInfo
+        location={mockLocation}
+        onTravelClick={onTravelClick}
+        isReachable={true}
+        nextLocationName="Berlin"
+      />
+    );
+
+    expect(screen.getByRole('button', { name: /Travel to Berlin/i })).toBeInTheDocument();
+    expect(screen.queryByText('Travel Here')).not.toBeInTheDocument();
+  });
 });

@@ -189,7 +189,8 @@ describe('buildCurrentLocationSegments', () => {
 });
 
 describe('buildCurrentLocationSegments – selected location as focal point', () => {
-  // Simulate the component-level logic: focalId = selectedLocationId ?? currentLocationId
+  // Component logic (no active route): focalId = selectedLocationId ?? currentLocationId
+  // Component logic (active route):    focalId = currentLocationId  (always show where you are)
   // A (current) → B, C
   // B → A, D
   const arcSegments = 16;

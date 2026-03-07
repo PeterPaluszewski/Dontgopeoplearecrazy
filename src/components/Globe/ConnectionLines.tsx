@@ -191,9 +191,10 @@ export default function ConnectionLines({
   const arcSegments = 32;
 
   const segments = useMemo<Segment[]>(() => {
-    // Focal point priority: last route waypoint → selected location → current location
-    // This keeps the base-layer connections showing where you can go next from the
-    // furthest point along the planned route.
+    // When a route is active, show connections from the route tail so the user
+    // can see which cities are reachable for the next Ctrl+click.
+    // The violet route arcs already show the planned legs back to the current city.
+    // With no route, show the selected city's connections (or current as fallback).
     const routeTail =
       routeLocationIds.length > 0 ? routeLocationIds[routeLocationIds.length - 1] : undefined;
     const focalId = routeTail ?? selectedLocationId ?? currentLocationId;

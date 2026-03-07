@@ -204,7 +204,7 @@ export default function Globe({
               selectedLocationId={selectedLocationId}
               routeLocationIds={routeLocationIds}
               highlightedFromId={currentLocationId}
-              highlightedToId={selectedLocationId}
+              highlightedToId={routeLocationIds.length === 0 ? selectedLocationId : undefined}
             />
             {showBorders && <CountryBordersOverlay globeRadius={2} />}
             {/* Location Markers */}

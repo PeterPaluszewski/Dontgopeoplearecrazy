@@ -11,7 +11,7 @@ import { getAllLocations } from '@/lib/database';
 import { GameEvent, triggerRandomEvent } from '@/lib/events';
 import { calculateGlobeQuaternion } from '@/lib/globe-utils';
 import { findLocationById, getDefaultLocation } from '@/lib/location-utils';
-import { appendToRoute } from '@/lib/route-utils';
+import { appendToRoute, areDirectlyConnected } from '@/lib/route-utils';
 import { createClient } from '@/lib/supabase';
 import { calculateTravelCost } from '@/lib/travel-utils';
 import { useGameStore } from '@/store/gameStore';
@@ -118,15 +118,42 @@ export default function GamePage() {
   const handleLocationClick = (location: Location, ctrlKey: boolean) => {
     if (ctrlKey && currentLocationId) {
       // Ctrl+click: attempt to append to the planned route.
-      // The candidate must be directly connected to the current route tail.
-      const next = appendToRoute(locations, routeLocationIds, currentLocationId, location.id);
-      if (next !== routeLocationIds) {
+      // If the route is empty but there is already a selected location that sits
+      // between the current city and the clicked city, auto-seed the route with
+      // that selected city first so the user doesn't have to re-click it.
+      // e.g. current=Jakarta, selected=Manila, Ctrl+click=HCMC
+      //   → route becomes [Manila, HCMC] not just [HCMC]
+      let baseRoute = routeLocationIds;
+      if (
+        baseRoute.length === 0 &&
+        selectedLocation &&
+        selectedLocation.id !== currentLocationId &&
+        selectedLocation.id !== location.id
+      ) {
+        const withSelected = appendToRoute(locations, [], currentLocationId, selectedLocation.id);
+        if (withSelected.length > 0) {
+          baseRoute = withSelected;
+        }
+      }
+
+      const next = appendToRoute(locations, baseRoute, currentLocationId, location.id);
+      if (next !== baseRoute) {
         setRouteLocationIds(next);
-        setSelectedLocation(location);
+        // Select the first waypoint so Travel Here is immediately active
+        const firstWaypoint = findLocationById(locations, next[0]);
+        setSelectedLocation(firstWaypoint ?? location);
       }
     } else {
-      // Regular click: clear the route, just select the location.
-      setRouteLocationIds([]);
+      // Plain click: update the info panel selection.
+      // If a route is active and the clicked city is already part of it (or is
+      // the current location), keep the route intact — the user is just browsing
+      // info along the planned path.
+      // Only clear the route when the user clicks an unrelated city.
+      const isPartOfRoute =
+        location.id === currentLocationId || routeLocationIds.includes(location.id);
+      if (!isPartOfRoute) {
+        setRouteLocationIds([]);
+      }
       setSelectedLocation(location);
     }
   };
@@ -141,7 +168,18 @@ export default function GamePage() {
 
     const cost = calculateTravelCost(1, travelDestination.difficultyMultiplier);
     travelToLocation(travelDestination.id, cost);
-    setSelectedLocation(travelDestination);
+
+    // Advance the route: drop the waypoint we just travelled to, then
+    // select the next waypoint (so Travel Here stays active for the next leg).
+    const nextRoute =
+      routeLocationIds[0] === travelDestination.id ? routeLocationIds.slice(1) : routeLocationIds;
+    setRouteLocationIds(nextRoute);
+    const nextSelected =
+      nextRoute.length > 0
+        ? (findLocationById(locations, nextRoute[0]) ?? travelDestination)
+        : travelDestination;
+    setSelectedLocation(nextSelected);
+
     setTravelDestination(null);
 
     // Auto-save after travel
@@ -207,7 +245,22 @@ export default function GamePage() {
 
         {/* Right Panel - Location Info */}
         <div className="absolute top-4 right-4 w-96 z-10">
-          <LocationInfo location={selectedLocation} onTravelClick={handleTravelClick} />
+          <LocationInfo
+            location={selectedLocation}
+            onTravelClick={handleTravelClick}
+            isReachable={
+              !!selectedLocation &&
+              !!currentLocationId &&
+              selectedLocation.id !== currentLocationId &&
+              (areDirectlyConnected(locations, currentLocationId, selectedLocation.id) ||
+                routeLocationIds[0] === selectedLocation.id)
+            }
+            nextLocationName={
+              routeLocationIds.length > 0
+                ? findLocationById(locations, routeLocationIds[0])?.name
+                : undefined
+            }
+          />
 
           {/* Route Planner Panel — only shown when a route is being built */}
           {routeLocationIds.length > 0 && (
