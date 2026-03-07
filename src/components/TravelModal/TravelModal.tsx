@@ -7,6 +7,7 @@ import { AlertTriangle, ChevronRight, MapPin, X } from 'lucide-react';
 
 interface TravelModalProps {
   destination: Location;
+  travelDays: number;
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
@@ -42,12 +43,18 @@ function ResourceCost({ label, current, cost, icon }: ResourceCostProps) {
   );
 }
 
-export default function TravelModal({ destination, isOpen, onClose, onConfirm }: TravelModalProps) {
+export default function TravelModal({
+  destination,
+  travelDays,
+  isOpen,
+  onClose,
+  onConfirm,
+}: TravelModalProps) {
   const { food, water, energy } = useGameStore();
 
   if (!isOpen) return null;
 
-  const cost = calculateTravelCost(1, destination.difficultyMultiplier);
+  const cost = calculateTravelCost(travelDays, destination.difficultyMultiplier);
   const canAfford = canAffordTravel({ food, water, energy }, cost);
 
   return (
@@ -63,7 +70,12 @@ export default function TravelModal({ destination, isOpen, onClose, onConfirm }:
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
           <div className="flex items-center gap-2">
             <MapPin className="w-5 h-5 text-blue-400" />
-            <h2 className="text-lg font-bold text-white">Travel to {destination.name}</h2>
+            <div>
+              <h2 className="text-lg font-bold text-white">Travel to {destination.name}</h2>
+              <p className="text-xs text-gray-400">
+                {travelDays} {travelDays === 1 ? 'day' : 'days'} journey
+              </p>
+            </div>
           </div>
           <button
             onClick={onClose}

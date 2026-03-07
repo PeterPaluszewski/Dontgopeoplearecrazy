@@ -20,6 +20,7 @@ describe('LocationInfo', () => {
     isCoastal: false,
     region: 'europe_mainland',
     connectedLocationIds: ['2', '3', '4'],
+    connections: [],
   };
 
   it('should show placeholder when no location is selected', () => {

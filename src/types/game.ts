@@ -27,6 +27,18 @@ export interface LocationConnection {
   transportOptions?: ConnectionTransportType[];
 }
 
+/**
+ * Lightweight travel detail for one connection endpoint, pre-joined from
+ * location_connections + connection_transport_types + transport_types.
+ * The transport selected is the fastest available on that leg.
+ */
+export interface ConnectionDetail {
+  toId: string;
+  distanceKm: number;
+  transportSlug: string;
+  speedKmh: number;
+}
+
 export interface Location {
   id: string;
   name: string;
@@ -43,6 +55,11 @@ export interface Location {
   region: string;
   /** IDs of directly reachable locations — assembled from the location_connections table */
   connectedLocationIds: string[];
+  /**
+   * Detailed travel info per outbound connection (distance + fastest transport).
+   * Populated by getAllLocations(); may be empty for legacy / test locations.
+   */
+  connections: ConnectionDetail[];
 }
 
 export interface Item {

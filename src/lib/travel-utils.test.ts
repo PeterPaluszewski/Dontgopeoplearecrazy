@@ -1,6 +1,11 @@
 import type { Location } from '@/types/game';
 import { describe, expect, it } from 'vitest';
-import { calculateTravelCost, canAffordTravel, canTravelToLocation } from './travel-utils';
+import {
+  calculateTravelCost,
+  canAffordTravel,
+  canTravelToLocation,
+  getConnectionDetail,
+} from './travel-utils';
 
 describe('travel-utils', () => {
   describe('calculateTravelCost', () => {
@@ -123,6 +128,7 @@ describe('travel-utils', () => {
       isCoastal: false,
       region: 'europe_mainland',
       connectedLocationIds: ['location-1'],
+      connections: [],
     };
 
     it('should allow travel to connected location', () => {
@@ -161,6 +167,75 @@ describe('travel-utils', () => {
         'location-4',
       ]);
       expect(result).toEqual({ canTravel: true });
+    });
+  });
+
+  describe('getConnectionDetail', () => {
+    const paris: Location = {
+      id: 'paris',
+      name: 'Paris',
+      description: '',
+      latitude: 48.85,
+      longitude: 2.35,
+      difficultyMultiplier: 1,
+      isCoastal: false,
+      region: 'europe_mainland',
+      connectedLocationIds: ['berlin'],
+      connections: [{ toId: 'berlin', distanceKm: 1050, transportSlug: 'train', speedKmh: 200 }],
+    };
+
+    const berlin: Location = {
+      id: 'berlin',
+      name: 'Berlin',
+      description: '',
+      latitude: 52.52,
+      longitude: 13.4,
+      difficultyMultiplier: 1,
+      isCoastal: false,
+      region: 'europe_mainland',
+      connectedLocationIds: ['paris'],
+      connections: [{ toId: 'paris', distanceKm: 1050, transportSlug: 'train', speedKmh: 200 }],
+    };
+
+    const locations = [paris, berlin];
+
+    it('returns the connection detail when found', () => {
+      expect(getConnectionDetail(locations, 'paris', 'berlin')).toEqual({
+        toId: 'berlin',
+        distanceKm: 1050,
+        transportSlug: 'train',
+        speedKmh: 200,
+      });
+    });
+
+    it('returns the reverse detail when found', () => {
+      expect(getConnectionDetail(locations, 'berlin', 'paris')).toEqual({
+        toId: 'paris',
+        distanceKm: 1050,
+        transportSlug: 'train',
+        speedKmh: 200,
+      });
+    });
+
+    it('returns fallback when from location not found', () => {
+      const result = getConnectionDetail(locations, 'unknown', 'berlin');
+      expect(result.toId).toBe('berlin');
+      expect(result.speedKmh).toBe(5);
+      expect(result.transportSlug).toBe('on_foot');
+    });
+
+    it('returns fallback when connection not found on location', () => {
+      const result = getConnectionDetail(locations, 'paris', 'tokyo');
+      expect(result.toId).toBe('tokyo');
+      expect(result.speedKmh).toBe(5);
+      expect(result.transportSlug).toBe('on_foot');
+    });
+
+    it('calculates correct travel days from returned detail', () => {
+      // 1050 km at 200 km/h / 24h = 0.219 days → ceil = 1 day
+      const detail = getConnectionDetail(locations, 'paris', 'berlin');
+      const days = Math.max(1, Math.ceil(detail.distanceKm / detail.speedKmh / 24));
+      expect(days).toBe(1);
     });
   });
 });

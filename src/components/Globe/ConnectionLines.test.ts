@@ -17,6 +17,7 @@ const baseLocation: Location = {
   isCoastal: false,
   region: 'europe_mainland',
   connectedLocationIds: [],
+  connections: [],
 };
 
 describe('buildConnectionSegments', () => {

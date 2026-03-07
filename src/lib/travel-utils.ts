@@ -1,9 +1,34 @@
-import { Location } from '@/types/game';
+import { ConnectionDetail, Location } from '@/types/game';
 
 export interface TravelCost {
   food: number;
   water: number;
   energy: number;
+}
+
+/** Fallback when a connection has no transport data (5 km/h walking). */
+const FALLBACK_CONNECTION: Omit<ConnectionDetail, 'toId'> = {
+  distanceKm: 0,
+  transportSlug: 'on_foot',
+  speedKmh: 5,
+};
+
+/**
+ * Find the pre-loaded ConnectionDetail for a specific from→to leg.
+ * Returns a fallback (walking, 0 km) if the locations array doesn't have
+ * connection data — this keeps tests simple and handles legacy saves.
+ */
+export function getConnectionDetail(
+  locations: Location[],
+  fromId: string,
+  toId: string
+): ConnectionDetail {
+  const from = locations.find((l) => l.id === fromId);
+  if (from) {
+    const detail = from.connections.find((c) => c.toId === toId);
+    if (detail) return detail;
+  }
+  return { toId, ...FALLBACK_CONNECTION };
 }
 
 /**

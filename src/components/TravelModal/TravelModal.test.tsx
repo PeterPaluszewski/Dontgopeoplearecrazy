@@ -20,10 +20,20 @@ describe('TravelModal', () => {
     isCoastal: false,
     region: 'europe_mainland',
     connectedLocationIds: ['location-1'],
+    connections: [],
   };
 
   const mockOnClose = vi.fn();
   const mockOnConfirm = vi.fn();
+
+  /** travelDays=1 matches the previous hardcoded value so existing cost assertions stay valid */
+  const defaultProps = () => ({
+    destination: mockDestination,
+    travelDays: 1,
+    isOpen: true,
+    onClose: mockOnClose,
+    onConfirm: mockOnConfirm,
+  });
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -35,40 +45,19 @@ describe('TravelModal', () => {
   });
 
   it('should not render when isOpen is false', () => {
-    render(
-      <TravelModal
-        destination={mockDestination}
-        isOpen={false}
-        onClose={mockOnClose}
-        onConfirm={mockOnConfirm}
-      />
-    );
+    render(<TravelModal {...defaultProps()} isOpen={false} />);
     expect(screen.queryByText('Travel to Berlin')).not.toBeInTheDocument();
   });
 
   it('should render modal when isOpen is true', () => {
-    render(
-      <TravelModal
-        destination={mockDestination}
-        isOpen={true}
-        onClose={mockOnClose}
-        onConfirm={mockOnConfirm}
-      />
-    );
+    render(<TravelModal {...defaultProps()} />);
     expect(screen.getByText('Travel to Berlin')).toBeInTheDocument();
   });
 
   it('should calculate and display resource costs', () => {
-    render(
-      <TravelModal
-        destination={mockDestination}
-        isOpen={true}
-        onClose={mockOnClose}
-        onConfirm={mockOnConfirm}
-      />
-    );
+    render(<TravelModal {...defaultProps()} />);
 
-    // Difficulty 2 = multiplier 1.25, 1 day (fixed until transport system)
+    // Difficulty 2 = multiplier 1.25, 1 day
     // Food: ceil(15 * 1 * 1.25) = 19
     // Water: ceil(20 * 1 * 1.25) = 25
     // Energy: ceil(25 * 1 * 1.25) = 32
@@ -78,14 +67,7 @@ describe('TravelModal', () => {
   });
 
   it('should show remaining resources after travel', () => {
-    render(
-      <TravelModal
-        destination={mockDestination}
-        isOpen={true}
-        onClose={mockOnClose}
-        onConfirm={mockOnConfirm}
-      />
-    );
+    render(<TravelModal {...defaultProps()} />);
 
     // 75 - 19 = 56
     expect(screen.getByText('56')).toBeInTheDocument();
@@ -102,14 +84,7 @@ describe('TravelModal', () => {
       energy: 10,
     });
 
-    render(
-      <TravelModal
-        destination={mockDestination}
-        isOpen={true}
-        onClose={mockOnClose}
-        onConfirm={mockOnConfirm}
-      />
-    );
+    render(<TravelModal {...defaultProps()} />);
 
     // Energy should be insufficient (needs 32, has 10)
     const containers = screen.getAllByText('Energy')[0].closest('div')?.parentElement;
@@ -123,14 +98,7 @@ describe('TravelModal', () => {
       energy: 10,
     });
 
-    render(
-      <TravelModal
-        destination={mockDestination}
-        isOpen={true}
-        onClose={mockOnClose}
-        onConfirm={mockOnConfirm}
-      />
-    );
+    render(<TravelModal {...defaultProps()} />);
 
     expect(
       screen.getByText(/You don't have enough resources to make this journey/)
@@ -144,14 +112,7 @@ describe('TravelModal', () => {
       energy: 100,
     });
 
-    render(
-      <TravelModal
-        destination={mockDestination}
-        isOpen={true}
-        onClose={mockOnClose}
-        onConfirm={mockOnConfirm}
-      />
-    );
+    render(<TravelModal {...defaultProps()} />);
 
     expect(
       screen.queryByText(/You don't have enough resources to make this journey/)
@@ -165,14 +126,7 @@ describe('TravelModal', () => {
       energy: 10,
     });
 
-    render(
-      <TravelModal
-        destination={mockDestination}
-        isOpen={true}
-        onClose={mockOnClose}
-        onConfirm={mockOnConfirm}
-      />
-    );
+    render(<TravelModal {...defaultProps()} />);
 
     const button = screen.getByText('Begin Journey');
     expect(button).toBeDisabled();
@@ -186,42 +140,21 @@ describe('TravelModal', () => {
       energy: 100,
     });
 
-    render(
-      <TravelModal
-        destination={mockDestination}
-        isOpen={true}
-        onClose={mockOnClose}
-        onConfirm={mockOnConfirm}
-      />
-    );
+    render(<TravelModal {...defaultProps()} />);
 
     const button = screen.getByText('Begin Journey');
     expect(button).not.toBeDisabled();
   });
 
   it('should call onClose when Cancel button is clicked', () => {
-    render(
-      <TravelModal
-        destination={mockDestination}
-        isOpen={true}
-        onClose={mockOnClose}
-        onConfirm={mockOnConfirm}
-      />
-    );
+    render(<TravelModal {...defaultProps()} />);
 
     fireEvent.click(screen.getByText('Cancel'));
     expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
 
   it('should call onClose when X button is clicked', () => {
-    render(
-      <TravelModal
-        destination={mockDestination}
-        isOpen={true}
-        onClose={mockOnClose}
-        onConfirm={mockOnConfirm}
-      />
-    );
+    render(<TravelModal {...defaultProps()} />);
 
     fireEvent.click(screen.getByLabelText('Close modal'));
     expect(mockOnClose).toHaveBeenCalledTimes(1);
@@ -234,14 +167,7 @@ describe('TravelModal', () => {
       energy: 100,
     });
 
-    render(
-      <TravelModal
-        destination={mockDestination}
-        isOpen={true}
-        onClose={mockOnClose}
-        onConfirm={mockOnConfirm}
-      />
-    );
+    render(<TravelModal {...defaultProps()} />);
 
     fireEvent.click(screen.getByText('Begin Journey'));
     expect(mockOnConfirm).toHaveBeenCalledTimes(1);
@@ -255,28 +181,14 @@ describe('TravelModal', () => {
       energy: 10,
     });
 
-    render(
-      <TravelModal
-        destination={mockDestination}
-        isOpen={true}
-        onClose={mockOnClose}
-        onConfirm={mockOnConfirm}
-      />
-    );
+    render(<TravelModal {...defaultProps()} />);
 
     fireEvent.click(screen.getByText('Begin Journey'));
     expect(mockOnConfirm).not.toHaveBeenCalled();
   });
 
   it('should call onClose when clicking outside modal', () => {
-    const { container } = render(
-      <TravelModal
-        destination={mockDestination}
-        isOpen={true}
-        onClose={mockOnClose}
-        onConfirm={mockOnConfirm}
-      />
-    );
+    const { container } = render(<TravelModal {...defaultProps()} />);
 
     const backdrop = container.firstChild;
     fireEvent.click(backdrop as Element);
@@ -284,14 +196,7 @@ describe('TravelModal', () => {
   });
 
   it('should not close when clicking inside modal', () => {
-    render(
-      <TravelModal
-        destination={mockDestination}
-        isOpen={true}
-        onClose={mockOnClose}
-        onConfirm={mockOnConfirm}
-      />
-    );
+    render(<TravelModal {...defaultProps()} />);
 
     fireEvent.click(screen.getByText('Travel to Berlin'));
     expect(mockOnClose).not.toHaveBeenCalled();

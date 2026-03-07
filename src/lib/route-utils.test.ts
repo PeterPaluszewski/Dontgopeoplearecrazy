@@ -12,6 +12,7 @@ const base: Location = {
   isCoastal: false,
   region: 'europe_mainland',
   connectedLocationIds: [],
+  connections: [],
 };
 
 // A → B → D (linear chain)

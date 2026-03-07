@@ -20,6 +20,7 @@ const locations: Location[] = [
     isCoastal: false,
     region: 'europe_mainland',
     connectedLocationIds: [],
+    connections: [],
   },
   {
     id: '2',
@@ -31,6 +32,7 @@ const locations: Location[] = [
     isCoastal: false,
     region: 'british_isles',
     connectedLocationIds: [],
+    connections: [],
   },
   {
     id: '3',
@@ -42,6 +44,7 @@ const locations: Location[] = [
     isCoastal: false,
     region: 'europe_mainland',
     connectedLocationIds: [],
+    connections: [],
   },
   {
     id: '4',
@@ -53,6 +56,7 @@ const locations: Location[] = [
     isCoastal: true,
     region: 'japan',
     connectedLocationIds: [],
+    connections: [],
   },
 ];
 

@@ -1,4 +1,5 @@
 import type {
+  ConnectionDetail,
   GameEvent,
   GameState,
   Item,
@@ -13,42 +14,100 @@ import { createClient } from './supabase';
 // ============================================
 
 /**
- * Fetch all location_connections rows and return a map of
- * locationId -> connectedLocationIds[], treating connections as bidirectional.
+ * Fetches all location_connections joined with their fastest available
+ * transport type (by speed_kmh). Returns two maps:
+ *  - connectionMap: locationId → connectedLocationIds[]  (for quick reachability checks)
+ *  - detailMap:     "fromId:toId" → ConnectionDetail      (for travel cost/day calculation)
  */
-async function getConnectionMap(
-  supabase: ReturnType<typeof createClient>
-): Promise<Map<string, string[]>> {
-  const { data, error } = await supabase
-    .from('location_connections')
-    .select('from_id, to_id, is_bidirectional');
+async function getConnectionMaps(supabase: ReturnType<typeof createClient>): Promise<{
+  connectionMap: Map<string, string[]>;
+  detailMap: Map<string, ConnectionDetail>;
+}> {
+  // Fetch connections with their transport options in one join.
+  // We select the transport type with the highest speed_kmh per connection.
+  const { data, error } = await supabase.from('location_connections').select(`
+    id,
+    from_id,
+    to_id,
+    distance_km,
+    is_bidirectional,
+    connection_transport_types (
+      is_forward,
+      transport_types ( slug, speed_kmh )
+    )
+  `);
 
   if (error) {
     console.error('Error fetching location connections:', error);
     throw error;
   }
 
-  const map = new Map<string, string[]>();
-  const add = (key: string, value: string) => {
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(value);
+  const connectionMap = new Map<string, string[]>();
+  const detailMap = new Map<string, ConnectionDetail>();
+
+  const addConn = (key: string, value: string) => {
+    if (!connectionMap.has(key)) connectionMap.set(key, []);
+    connectionMap.get(key)!.push(value);
   };
 
   for (const row of data || []) {
-    add(row.from_id, row.to_id);
+    addConn(row.from_id, row.to_id);
     if (row.is_bidirectional) {
-      add(row.to_id, row.from_id);
+      addConn(row.to_id, row.from_id);
+    }
+
+    const distanceKm: number = row.distance_km ?? 0;
+
+    // Pick the fastest transport that covers the forward direction (from→to)
+    // Fall back to walking (5 km/h) if no transport is registered.
+    const forwardOptions = (row.connection_transport_types ?? []).filter(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (ctt: any) => ctt.is_forward === true || ctt.is_forward === null
+    );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fastest = forwardOptions.reduce((best: any, ctt: any) => {
+      const speed = ctt.transport_types?.speed_kmh ?? 0;
+      return speed > (best?.transport_types?.speed_kmh ?? 0) ? ctt : best;
+    }, null);
+
+    const forwardDetail: ConnectionDetail = {
+      toId: row.to_id,
+      distanceKm,
+      transportSlug: fastest?.transport_types?.slug ?? 'on_foot',
+      speedKmh: fastest?.transport_types?.speed_kmh ?? 5,
+    };
+    detailMap.set(`${row.from_id}:${row.to_id}`, forwardDetail);
+
+    if (row.is_bidirectional) {
+      // Reverse direction — pick fastest transport with is_forward = false, or reuse forward
+      const reverseOptions = (row.connection_transport_types ?? []).filter(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (ctt: any) => ctt.is_forward === false
+      );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fastestRev = reverseOptions.reduce((best: any, ctt: any) => {
+        const speed = ctt.transport_types?.speed_kmh ?? 0;
+        return speed > (best?.transport_types?.speed_kmh ?? 0) ? ctt : best;
+      }, null);
+
+      const reverseDetail: ConnectionDetail = {
+        toId: row.from_id,
+        distanceKm,
+        transportSlug: fastestRev?.transport_types?.slug ?? forwardDetail.transportSlug,
+        speedKmh: fastestRev?.transport_types?.speed_kmh ?? forwardDetail.speedKmh,
+      };
+      detailMap.set(`${row.to_id}:${row.from_id}`, reverseDetail);
     }
   }
 
-  return map;
+  return { connectionMap, detailMap };
 }
 
 export async function getAllLocations(): Promise<Location[]> {
   const supabase = createClient();
-  const [locResult, connectionMap] = await Promise.all([
+  const [locResult, { connectionMap, detailMap }] = await Promise.all([
     supabase.from('locations').select('*').order('name'),
-    getConnectionMap(supabase),
+    getConnectionMaps(supabase),
   ]);
 
   if (locResult.error) {
@@ -56,17 +115,25 @@ export async function getAllLocations(): Promise<Location[]> {
     throw locResult.error;
   }
 
-  return (locResult.data || []).map((loc) => ({
-    id: loc.id,
-    name: loc.name,
-    description: loc.description || '',
-    latitude: loc.latitude,
-    longitude: loc.longitude,
-    difficultyMultiplier: loc.difficulty_multiplier,
-    isCoastal: loc.is_coastal ?? false,
-    region: loc.region ?? 'unknown',
-    connectedLocationIds: connectionMap.get(loc.id) ?? [],
-  }));
+  return (locResult.data || []).map((loc) => {
+    const connectedLocationIds = connectionMap.get(loc.id) ?? [];
+    const connections: ConnectionDetail[] = connectedLocationIds
+      .map((toId) => detailMap.get(`${loc.id}:${toId}`))
+      .filter((d): d is ConnectionDetail => d !== undefined);
+
+    return {
+      id: loc.id,
+      name: loc.name,
+      description: loc.description || '',
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+      difficultyMultiplier: loc.difficulty_multiplier,
+      isCoastal: loc.is_coastal ?? false,
+      region: loc.region ?? 'unknown',
+      connectedLocationIds,
+      connections,
+    };
+  });
 }
 
 export async function getLocationById(id: string): Promise<Location | null> {
@@ -106,6 +173,7 @@ export async function getLocationById(id: string): Promise<Location | null> {
     isCoastal: data.is_coastal ?? false,
     region: data.region ?? 'unknown',
     connectedLocationIds,
+    connections: [],
   };
 }
 

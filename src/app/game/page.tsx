@@ -14,7 +14,7 @@ import { calculateGlobeQuaternion } from '@/lib/globe-utils';
 import { findLocationById, getDefaultLocation } from '@/lib/location-utils';
 import { appendToRoute, areDirectlyConnected } from '@/lib/route-utils';
 import { createClient } from '@/lib/supabase';
-import { calculateTravelCost } from '@/lib/travel-utils';
+import { calculateTravelCost, calculateTravelDays, getConnectionDetail } from '@/lib/travel-utils';
 import { useGameStore } from '@/store/gameStore';
 import type { Location } from '@/types/game';
 import type { User } from '@supabase/supabase-js';
@@ -165,8 +165,10 @@ export default function GamePage() {
   const handleTravelConfirm = async () => {
     if (!travelDestination) return;
 
-    const cost = calculateTravelCost(1, travelDestination.difficultyMultiplier);
-    travelToLocation(travelDestination.id, cost);
+    const connection = getConnectionDetail(locations, currentLocationId, travelDestination.id);
+    const travelDays = calculateTravelDays(connection.distanceKm, connection.speedKmh);
+    const cost = calculateTravelCost(travelDays, travelDestination.difficultyMultiplier);
+    travelToLocation(travelDestination.id, cost, travelDays);
 
     // Advance the route: drop the waypoint we just travelled to, then
     // select the next waypoint (so Travel Here stays active for the next leg).
@@ -396,14 +398,20 @@ export default function GamePage() {
         />
 
         {/* Travel Modal */}
-        {travelDestination && (
-          <TravelModal
-            destination={travelDestination}
-            isOpen={travelModalOpen}
-            onClose={() => setTravelModalOpen(false)}
-            onConfirm={handleTravelConfirm}
-          />
-        )}
+        {travelDestination &&
+          (() => {
+            const conn = getConnectionDetail(locations, currentLocationId, travelDestination.id);
+            const days = calculateTravelDays(conn.distanceKm, conn.speedKmh);
+            return (
+              <TravelModal
+                destination={travelDestination}
+                travelDays={days}
+                isOpen={travelModalOpen}
+                onClose={() => setTravelModalOpen(false)}
+                onConfirm={handleTravelConfirm}
+              />
+            );
+          })()}
 
         {/* Event Modal */}
         {currentEvent && (
