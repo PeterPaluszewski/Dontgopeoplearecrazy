@@ -37,6 +37,8 @@ export interface ConnectionDetail {
   distanceKm: number;
   transportSlug: string;
   speedKmh: number;
+  /** Multiplier applied to the base money cost per day (1.0 = normal, higher = more expensive). */
+  baseCostMultiplier: number;
 }
 
 export interface Location {
@@ -85,6 +87,7 @@ export interface GameState {
   food: number;
   water: number;
   energy: number;
+  money: number;
   inventory: InventoryItem[];
   visitedLocationIds: string[];
   isActive: boolean;

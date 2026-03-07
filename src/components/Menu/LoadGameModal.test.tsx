@@ -43,6 +43,7 @@ describe('LoadGameModal', () => {
       food: 100,
       water: 100,
       energy: 100,
+      money: 200,
       inventory: [],
       visitedLocationIds: ['paris-uuid'],
       isActive: true,
@@ -58,6 +59,7 @@ describe('LoadGameModal', () => {
       food: 50,
       water: 60,
       energy: 80,
+      money: 200,
       inventory: [],
       visitedLocationIds: ['paris-uuid', 'berlin-uuid'],
       isActive: false,
@@ -82,7 +84,7 @@ describe('LoadGameModal', () => {
 
   it('should render modal when isOpen is true', async () => {
     render(<LoadGameModal isOpen={true} onClose={vi.fn()} />);
-    
+
     await waitFor(() => {
       expect(screen.getByText('Load Game')).toBeInTheDocument();
     });
@@ -98,7 +100,10 @@ describe('LoadGameModal', () => {
 
   it('should display loading state while fetching saves', async () => {
     vi.mocked(saveLoad.loadAllSaves).mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve({ success: true, saves: mockSaves }), 100))
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve({ success: true, saves: mockSaves }), 100)
+        )
     );
 
     render(<LoadGameModal isOpen={true} onClose={vi.fn()} />);
@@ -126,11 +131,11 @@ describe('LoadGameModal', () => {
       // Check for difficulty and character name
       expect(screen.getByText('normal')).toBeInTheDocument();
       expect(screen.getByText('hard')).toBeInTheDocument();
-      
+
       // Check for resource values (they appear multiple times with %)
       const percentValues = screen.getAllByText(/100%/);
       expect(percentValues.length).toBeGreaterThan(0);
-      
+
       expect(screen.getByText(/50%/)).toBeInTheDocument();
     });
   });
@@ -148,9 +153,9 @@ describe('LoadGameModal', () => {
 
   it('should show error message when loading fails', async () => {
     const toast = await import('react-hot-toast');
-    vi.mocked(saveLoad.loadAllSaves).mockResolvedValue({ 
-      success: false, 
-      error: 'Database error' 
+    vi.mocked(saveLoad.loadAllSaves).mockResolvedValue({
+      success: false,
+      error: 'Database error',
     });
 
     render(<LoadGameModal isOpen={true} onClose={vi.fn()} />);
@@ -233,7 +238,7 @@ describe('LoadGameModal', () => {
       expect(saveLoad.deleteSave).toHaveBeenCalledWith('save-1');
       expect(toast.toast.success).toHaveBeenCalledWith('Save deleted');
     });
-    
+
     confirmSpy.mockRestore();
   });
 
@@ -241,9 +246,9 @@ describe('LoadGameModal', () => {
     const user = userEvent.setup();
     const toast = await import('react-hot-toast');
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    vi.mocked(saveLoad.deleteSave).mockResolvedValue({ 
-      success: false, 
-      error: 'Delete failed' 
+    vi.mocked(saveLoad.deleteSave).mockResolvedValue({
+      success: false,
+      error: 'Delete failed',
     });
 
     render(<LoadGameModal isOpen={true} onClose={vi.fn()} />);
@@ -258,7 +263,7 @@ describe('LoadGameModal', () => {
     await waitFor(() => {
       expect(toast.toast.error).toHaveBeenCalledWith('Failed to delete save');
     });
-    
+
     confirmSpy.mockRestore();
   });
 
@@ -281,7 +286,7 @@ describe('LoadGameModal', () => {
       expect(screen.queryByText('Hero 1')).not.toBeInTheDocument();
       expect(screen.getByText('Hero 2')).toBeInTheDocument();
     });
-    
+
     confirmSpy.mockRestore();
   });
 
@@ -304,7 +309,7 @@ describe('LoadGameModal', () => {
     await waitFor(() => {
       expect(screen.getByText('Deleting...')).toBeInTheDocument();
     });
-    
+
     confirmSpy.mockRestore();
   });
 

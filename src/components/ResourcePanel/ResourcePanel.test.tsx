@@ -18,6 +18,7 @@ describe('ResourcePanel', () => {
       food: 100,
       water: 100,
       energy: 100,
+      money: 200,
     } as ReturnType<typeof useGameStore>);
 
     render(<ResourcePanel />);
@@ -32,6 +33,7 @@ describe('ResourcePanel', () => {
       food: 75,
       water: 50,
       energy: 25,
+      money: 200,
     } as ReturnType<typeof useGameStore>);
 
     render(<ResourcePanel />);
@@ -46,6 +48,7 @@ describe('ResourcePanel', () => {
       food: 25,
       water: 100,
       energy: 100,
+      money: 200,
     } as ReturnType<typeof useGameStore>);
 
     render(<ResourcePanel />);
@@ -58,6 +61,7 @@ describe('ResourcePanel', () => {
       food: 10,
       water: 100,
       energy: 100,
+      money: 200,
     } as ReturnType<typeof useGameStore>);
 
     render(<ResourcePanel />);
@@ -71,6 +75,7 @@ describe('ResourcePanel', () => {
       food: 80,
       water: 90,
       energy: 100,
+      money: 200,
     } as ReturnType<typeof useGameStore>);
 
     render(<ResourcePanel />);
@@ -84,6 +89,7 @@ describe('ResourcePanel', () => {
       food: 10,
       water: 20,
       energy: 5,
+      money: 200,
     } as ReturnType<typeof useGameStore>);
 
     render(<ResourcePanel />);
@@ -97,6 +103,7 @@ describe('ResourcePanel', () => {
       food: 100,
       water: 100,
       energy: 100,
+      money: 200,
     } as ReturnType<typeof useGameStore>);
 
     const { container } = render(<ResourcePanel />);
@@ -105,6 +112,7 @@ describe('ResourcePanel', () => {
     expect(container.textContent).toContain('🍕');
     expect(container.textContent).toContain('💧');
     expect(container.textContent).toContain('⚡');
+    expect(container.textContent).toContain('💰');
   });
 
   it('should handle zero resources', () => {
@@ -112,6 +120,7 @@ describe('ResourcePanel', () => {
       food: 0,
       water: 0,
       energy: 0,
+      money: 0,
     } as ReturnType<typeof useGameStore>);
 
     render(<ResourcePanel />);
@@ -127,6 +136,7 @@ describe('ResourcePanel', () => {
       food: 30,
       water: 100,
       energy: 100,
+      money: 200,
     } as ReturnType<typeof useGameStore>);
 
     render(<ResourcePanel />);
@@ -140,6 +150,7 @@ describe('ResourcePanel', () => {
       food: 15,
       water: 100,
       energy: 100,
+      money: 200,
     } as ReturnType<typeof useGameStore>);
 
     render(<ResourcePanel />);
@@ -147,5 +158,33 @@ describe('ResourcePanel', () => {
     // At exactly 15, should not show critical (< 15)
     expect(screen.queryByText(/Critical/i)).not.toBeInTheDocument();
     expect(screen.getByText(/Low resources/i)).toBeInTheDocument();
+  });
+
+  it('should display money balance', () => {
+    vi.mocked(useGameStore).mockReturnValue({
+      food: 100,
+      water: 100,
+      energy: 100,
+      money: 150,
+    } as ReturnType<typeof useGameStore>);
+
+    render(<ResourcePanel />);
+
+    expect(screen.getByText('money')).toBeInTheDocument();
+    expect(screen.getByText('€150')).toBeInTheDocument();
+  });
+
+  it('should highlight money in red when below 20', () => {
+    vi.mocked(useGameStore).mockReturnValue({
+      food: 100,
+      water: 100,
+      energy: 100,
+      money: 10,
+    } as ReturnType<typeof useGameStore>);
+
+    render(<ResourcePanel />);
+
+    const moneyValue = screen.getByText('€10');
+    expect(moneyValue).toHaveClass('text-red-400');
   });
 });

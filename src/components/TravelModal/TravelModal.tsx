@@ -11,6 +11,7 @@ interface TravelModalProps {
   travelDistanceKm: number;
   travelSpeedKmh: number;
   travelTransportSlug: string;
+  travelBaseCostMultiplier: number;
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
@@ -52,16 +53,21 @@ export default function TravelModal({
   travelDistanceKm,
   travelSpeedKmh,
   travelTransportSlug,
+  travelBaseCostMultiplier,
   isOpen,
   onClose,
   onConfirm,
 }: TravelModalProps) {
-  const { food, water, energy } = useGameStore();
+  const { food, water, energy, money } = useGameStore();
 
   if (!isOpen) return null;
 
-  const cost = calculateTravelCost(travelDays, destination.difficultyMultiplier);
-  const canAfford = canAffordTravel({ food, water, energy }, cost);
+  const cost = calculateTravelCost(
+    travelDays,
+    destination.difficultyMultiplier,
+    travelBaseCostMultiplier
+  );
+  const canAfford = canAffordTravel({ food, water, energy, money: money ?? 0 }, cost);
 
   return (
     <div
@@ -100,6 +106,7 @@ export default function TravelModal({
             <ResourceCost label="Food" current={food} cost={cost.food} icon="🍕" />
             <ResourceCost label="Water" current={water} cost={cost.water} icon="💧" />
             <ResourceCost label="Energy" current={energy} cost={cost.energy} icon="⚡" />
+            <ResourceCost label="Money" current={money ?? 0} cost={cost.money} icon="💰" />
           </div>
 
           {/* Warning if insufficient */}

@@ -5,6 +5,8 @@ export interface TravelCost {
   food: number;
   water: number;
   energy: number;
+  /** Monetary cost in euros (€). Scales with transport baseCostMultiplier. */
+  money: number;
 }
 
 /**
@@ -43,25 +45,25 @@ export function getConnectionDetail(
       ? haversineKm(fromLoc.latitude, fromLoc.longitude, toLoc.latitude, toLoc.longitude)
       : 0;
 
-  return { toId, distanceKm, transportSlug: FALLBACK_TRANSPORT_SLUG, speedKmh: FALLBACK_SPEED_KMH };
+  return {
+    toId,
+    distanceKm,
+    transportSlug: FALLBACK_TRANSPORT_SLUG,
+    speedKmh: FALLBACK_SPEED_KMH,
+    baseCostMultiplier: 0,
+  };
 }
 
-/** Maps a transport slug to a readable name shown in the UI. */
-export const TRANSPORT_NAMES: Record<string, string> = {
-  on_foot: 'on foot',
-  bicycle: 'by bicycle',
-  rickshaw: 'by rickshaw',
-  tuk_tuk: 'by tuk-tuk',
-  hitchhike: 'by hitchhike',
-  car: 'by car',
-  bus: 'by bus',
-  train: 'by train',
-  ferry: 'by ferry',
-  sailboat: 'by sailboat',
-  freight_ship: 'by freight ship',
-  cruise_ship: 'by cruise ship',
-  plane: 'by plane',
-};
+/**
+ * Derive a human-readable transport label from a slug.
+ * Slugs use snake_case: 'on_foot' → 'on foot', everything else → 'by <words>'.
+ * e.g. 'cruise_ship' → 'by cruise ship', 'tuk_tuk' → 'by tuk tuk'
+ */
+export function slugToTransportName(slug: string): string {
+  const words = slug.replace(/_/g, ' ');
+  if (slug === 'on_foot') return words; // 'on foot' needs no prefix
+  return `by ${words}`;
+}
 
 /**
  * Format a journey duration as a human-readable string with optional transport name.
@@ -76,7 +78,7 @@ export function formatTravelDuration(
   const days = Math.floor(totalHours / TRAVEL_HOURS_PER_DAY);
   const remainingHours = Math.round(totalHours % TRAVEL_HOURS_PER_DAY);
 
-  const transportName = TRANSPORT_NAMES[transportSlug] ?? `by ${transportSlug}`;
+  const transportName = slugToTransportName(transportSlug);
 
   const parts: string[] = [];
   if (days > 0) parts.push(`${days} ${days === 1 ? 'day' : 'days'}`);
@@ -102,13 +104,26 @@ export function calculateTravelDays(distanceKm: number, speedKmh: number): numbe
 }
 
 /**
- * Calculate resource costs for traveling to a location
+ * Base money cost per in-game day of travel (at baseCostMultiplier = 1).
+ * e.g. a car trip with multiplier 2 costs 2× this per day.
+ * Walking (multiplier 0) is free.
+ */
+export const BASE_MONEY_COST_PER_DAY = 10;
+
+/**
+ * Calculate resource costs for traveling to a location.
  * Formula: base cost per day * travel days * difficulty multiplier
- * @param travelDays Number of days to travel
- * @param difficulty Difficulty rating of the destination (1-5)
+ * Money cost: BASE_MONEY_COST_PER_DAY * travel days * baseCostMultiplier
+ * @param travelDays Fractional travel days
+ * @param difficulty Difficulty rating of the destination (1–5)
+ * @param baseCostMultiplier Transport cost multiplier (0 = free/walking, 1 = normal, higher = expensive)
  * @returns Resource costs for the journey
  */
-export function calculateTravelCost(travelDays: number, difficulty: number): TravelCost {
+export function calculateTravelCost(
+  travelDays: number,
+  difficulty: number,
+  baseCostMultiplier = 0
+): TravelCost {
   // Base cost per day
   const baseFoodCost = 15;
   const baseWaterCost = 20;
@@ -121,6 +136,7 @@ export function calculateTravelCost(travelDays: number, difficulty: number): Tra
     food: Math.ceil(baseFoodCost * travelDays * difficultyMultiplier),
     water: Math.ceil(baseWaterCost * travelDays * difficultyMultiplier),
     energy: Math.ceil(baseEnergyCost * travelDays * difficultyMultiplier),
+    money: Math.ceil(BASE_MONEY_COST_PER_DAY * travelDays * baseCostMultiplier),
   };
 }
 
@@ -128,13 +144,14 @@ export function calculateTravelCost(travelDays: number, difficulty: number): Tra
  * Check if player has sufficient resources for travel
  */
 export function canAffordTravel(
-  currentResources: { food: number; water: number; energy: number },
+  currentResources: { food: number; water: number; energy: number; money: number },
   cost: TravelCost
 ): boolean {
   return (
     currentResources.food >= cost.food &&
     currentResources.water >= cost.water &&
-    currentResources.energy >= cost.energy
+    currentResources.energy >= cost.energy &&
+    currentResources.money >= cost.money
   );
 }
 

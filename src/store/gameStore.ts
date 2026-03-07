@@ -24,6 +24,7 @@ const initialState = {
   food: 100,
   water: 100,
   energy: 100,
+  money: 200,
   inventory: [] as InventoryItem[],
   visitedLocationIds: [] as string[],
   isActive: false,
@@ -86,6 +87,7 @@ export const useGameStore = create<GameStore>((set) => ({
       const newFood = Math.max(0, state.food - cost.food);
       const newWater = Math.max(0, state.water - cost.water);
       const newEnergy = Math.max(0, state.energy - cost.energy);
+      const newMoney = Math.max(0, (state.money ?? 200) - cost.money);
 
       // Mark as visited if not already
       const newVisitedIds = state.visitedLocationIds.includes(locationId)
@@ -97,6 +99,7 @@ export const useGameStore = create<GameStore>((set) => ({
         food: newFood,
         water: newWater,
         energy: newEnergy,
+        money: newMoney,
         visitedLocationIds: newVisitedIds,
         totalTravelDays: (state.totalTravelDays ?? 0) + travelDays,
       };
@@ -111,6 +114,7 @@ export const useGameStore = create<GameStore>((set) => ({
       food: gameState.food,
       water: gameState.water,
       energy: gameState.energy,
+      money: gameState.money ?? 200,
       inventory: gameState.inventory,
       visitedLocationIds: gameState.visitedLocationIds,
       isActive: gameState.isActive,
@@ -126,6 +130,7 @@ export const useGameStore = create<GameStore>((set) => ({
       food: gameState.food,
       water: gameState.water,
       energy: gameState.energy,
+      money: gameState.money ?? 200,
       inventory: gameState.inventory,
       visitedLocationIds: gameState.visitedLocationIds,
       isActive: gameState.isActive,
@@ -142,6 +147,7 @@ export const useGameStore = create<GameStore>((set) => ({
       food: state.food,
       water: state.water,
       energy: state.energy,
+      money: state.money ?? 200,
       inventory: state.inventory,
       visitedLocationIds: state.visitedLocationIds,
       isActive: state.isActive,
@@ -165,6 +171,7 @@ export const useGameStore = create<GameStore>((set) => ({
         food: result.gameState.food,
         water: result.gameState.water,
         energy: result.gameState.energy,
+        money: result.gameState.money ?? 200,
         inventory: result.gameState.inventory,
         visitedLocationIds: result.gameState.visitedLocationIds,
         isActive: result.gameState.isActive,

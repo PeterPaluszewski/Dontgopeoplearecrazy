@@ -7,7 +7,7 @@ import {
   canTravelToLocation,
   formatTravelDuration,
   getConnectionDetail,
-  TRANSPORT_NAMES,
+  slugToTransportName,
   TRAVEL_HOURS_PER_DAY,
 } from './travel-utils';
 
@@ -19,6 +19,7 @@ describe('travel-utils', () => {
         food: 15,
         water: 20,
         energy: 25,
+        money: 0, // baseCostMultiplier defaults to 0 (free)
       });
     });
 
@@ -28,6 +29,7 @@ describe('travel-utils', () => {
         food: 45, // 15 * 3
         water: 60, // 20 * 3
         energy: 75, // 25 * 3
+        money: 0,
       });
     });
 
@@ -38,6 +40,7 @@ describe('travel-utils', () => {
         food: 45, // ceil(15 * 2 * 1.5)
         water: 60, // ceil(20 * 2 * 1.5)
         energy: 75, // ceil(25 * 2 * 1.5)
+        money: 0,
       });
     });
 
@@ -48,6 +51,7 @@ describe('travel-utils', () => {
         food: 30, // ceil(15 * 1 * 2.0)
         water: 40, // ceil(20 * 1 * 2.0)
         energy: 50, // ceil(25 * 1 * 2.0)
+        money: 0,
       });
     });
 
@@ -58,6 +62,7 @@ describe('travel-utils', () => {
         food: 19, // ceil(15 * 1.25 = 18.75)
         water: 25, // ceil(20 * 1.25 = 25)
         energy: 32, // ceil(25 * 1.25 = 31.25)
+        money: 0,
       });
     });
 
@@ -67,57 +72,73 @@ describe('travel-utils', () => {
         food: 0,
         water: 0,
         energy: 0,
+        money: 0,
       });
+    });
+
+    it('should scale money cost with baseCostMultiplier', () => {
+      // baseCostMultiplier=2, 1 day, difficulty 1 → money = ceil(10 * 1 * 2) = 20
+      const cost = calculateTravelCost(1, 1, 2);
+      expect(cost.money).toBe(20);
+      // baseCostMultiplier=1.5, 3 days → money = ceil(10 * 3 * 1.5) = 45
+      const cost2 = calculateTravelCost(3, 1, 1.5);
+      expect(cost2.money).toBe(45);
     });
   });
 
   describe('canAffordTravel', () => {
     it('should return true when resources are sufficient', () => {
-      const resources = { food: 50, water: 60, energy: 70 };
-      const cost = { food: 30, water: 40, energy: 50 };
+      const resources = { food: 50, water: 60, energy: 70, money: 100 };
+      const cost = { food: 30, water: 40, energy: 50, money: 0 };
       expect(canAffordTravel(resources, cost)).toBe(true);
     });
 
     it('should return true when resources exactly match cost', () => {
-      const resources = { food: 30, water: 40, energy: 50 };
-      const cost = { food: 30, water: 40, energy: 50 };
+      const resources = { food: 30, water: 40, energy: 50, money: 20 };
+      const cost = { food: 30, water: 40, energy: 50, money: 20 };
       expect(canAffordTravel(resources, cost)).toBe(true);
     });
 
     it('should return false when food is insufficient', () => {
-      const resources = { food: 20, water: 60, energy: 70 };
-      const cost = { food: 30, water: 40, energy: 50 };
+      const resources = { food: 20, water: 60, energy: 70, money: 100 };
+      const cost = { food: 30, water: 40, energy: 50, money: 0 };
       expect(canAffordTravel(resources, cost)).toBe(false);
     });
 
     it('should return false when water is insufficient', () => {
-      const resources = { food: 50, water: 30, energy: 70 };
-      const cost = { food: 30, water: 40, energy: 50 };
+      const resources = { food: 50, water: 30, energy: 70, money: 100 };
+      const cost = { food: 30, water: 40, energy: 50, money: 0 };
       expect(canAffordTravel(resources, cost)).toBe(false);
     });
 
     it('should return false when energy is insufficient', () => {
-      const resources = { food: 50, water: 60, energy: 40 };
-      const cost = { food: 30, water: 40, energy: 50 };
+      const resources = { food: 50, water: 60, energy: 40, money: 100 };
+      const cost = { food: 30, water: 40, energy: 50, money: 0 };
       expect(canAffordTravel(resources, cost)).toBe(false);
     });
 
     it('should return false when all resources are insufficient', () => {
-      const resources = { food: 10, water: 20, energy: 30 };
-      const cost = { food: 30, water: 40, energy: 50 };
+      const resources = { food: 10, water: 20, energy: 30, money: 0 };
+      const cost = { food: 30, water: 40, energy: 50, money: 0 };
       expect(canAffordTravel(resources, cost)).toBe(false);
     });
 
     it('should handle zero resources', () => {
-      const resources = { food: 0, water: 0, energy: 0 };
-      const cost = { food: 30, water: 40, energy: 50 };
+      const resources = { food: 0, water: 0, energy: 0, money: 0 };
+      const cost = { food: 30, water: 40, energy: 50, money: 0 };
       expect(canAffordTravel(resources, cost)).toBe(false);
     });
 
     it('should handle zero cost', () => {
-      const resources = { food: 50, water: 60, energy: 70 };
-      const cost = { food: 0, water: 0, energy: 0 };
+      const resources = { food: 50, water: 60, energy: 70, money: 0 };
+      const cost = { food: 0, water: 0, energy: 0, money: 0 };
       expect(canAffordTravel(resources, cost)).toBe(true);
+    });
+
+    it('should return false when money is insufficient', () => {
+      const resources = { food: 100, water: 100, energy: 100, money: 10 };
+      const cost = { food: 15, water: 20, energy: 25, money: 20 };
+      expect(canAffordTravel(resources, cost)).toBe(false);
     });
   });
 
@@ -185,7 +206,15 @@ describe('travel-utils', () => {
       isCoastal: false,
       region: 'europe_mainland',
       connectedLocationIds: ['berlin'],
-      connections: [{ toId: 'berlin', distanceKm: 1050, transportSlug: 'train', speedKmh: 200 }],
+      connections: [
+        {
+          toId: 'berlin',
+          distanceKm: 1050,
+          transportSlug: 'train',
+          speedKmh: 200,
+          baseCostMultiplier: 0,
+        },
+      ],
     };
 
     const berlin: Location = {
@@ -198,7 +227,15 @@ describe('travel-utils', () => {
       isCoastal: false,
       region: 'europe_mainland',
       connectedLocationIds: ['paris'],
-      connections: [{ toId: 'paris', distanceKm: 1050, transportSlug: 'train', speedKmh: 200 }],
+      connections: [
+        {
+          toId: 'paris',
+          distanceKm: 1050,
+          transportSlug: 'train',
+          speedKmh: 200,
+          baseCostMultiplier: 0,
+        },
+      ],
     };
 
     const locations = [paris, berlin];
@@ -209,6 +246,7 @@ describe('travel-utils', () => {
         distanceKm: 1050,
         transportSlug: 'train',
         speedKmh: 200,
+        baseCostMultiplier: 0,
       });
     });
 
@@ -218,6 +256,7 @@ describe('travel-utils', () => {
         distanceKm: 1050,
         transportSlug: 'train',
         speedKmh: 200,
+        baseCostMultiplier: 0,
       });
     });
 
@@ -227,6 +266,7 @@ describe('travel-utils', () => {
       expect(result.speedKmh).toBe(5);
       expect(result.transportSlug).toBe('on_foot');
       expect(result.distanceKm).toBe(0); // neither location has coords in this fallback
+      expect(result.baseCostMultiplier).toBe(0); // fallback is free
     });
 
     it('returns fallback with computed distance when connection not found on location', () => {
@@ -236,6 +276,7 @@ describe('travel-utils', () => {
       expect(result.speedKmh).toBe(5);
       expect(result.transportSlug).toBe('on_foot');
       expect(result.distanceKm).toBe(0); // tokyo not in locations array
+      expect(result.baseCostMultiplier).toBe(0); // fallback is free
     });
 
     it('calculates correct travel days for motorised transport (train)', () => {
@@ -301,11 +342,16 @@ describe('travel-utils', () => {
       expect(formatTravelDuration(100, 50, 'hovercraft')).toContain('by hovercraft');
     });
 
-    it('TRANSPORT_NAMES covers all common slugs', () => {
-      expect(TRANSPORT_NAMES['plane']).toBe('by plane');
-      expect(TRANSPORT_NAMES['bicycle']).toBe('by bicycle');
-      expect(TRANSPORT_NAMES['on_foot']).toBe('on foot');
-      expect(TRANSPORT_NAMES['cruise_ship']).toBe('by cruise ship');
+    it('slugToTransportName derives label from slug without a hardcoded map', () => {
+      expect(slugToTransportName('plane')).toBe('by plane');
+      expect(slugToTransportName('bicycle')).toBe('by bicycle');
+      expect(slugToTransportName('on_foot')).toBe('on foot');
+      expect(slugToTransportName('cruise_ship')).toBe('by cruise ship');
+      expect(slugToTransportName('tuk_tuk')).toBe('by tuk tuk');
+      expect(slugToTransportName('freight_ship')).toBe('by freight ship');
+      // Any new slug works automatically
+      expect(slugToTransportName('hovercraft')).toBe('by hovercraft');
+      expect(slugToTransportName('dog_sled')).toBe('by dog sled');
     });
   });
 });

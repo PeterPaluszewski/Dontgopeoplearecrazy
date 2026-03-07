@@ -167,7 +167,11 @@ export default function GamePage() {
 
     const connection = getConnectionDetail(locations, currentLocationId, travelDestination.id);
     const travelDays = calculateTravelDays(connection.distanceKm, connection.speedKmh);
-    const cost = calculateTravelCost(travelDays, travelDestination.difficultyMultiplier);
+    const cost = calculateTravelCost(
+      travelDays,
+      travelDestination.difficultyMultiplier,
+      connection.baseCostMultiplier
+    );
     travelToLocation(travelDestination.id, cost, travelDays);
 
     // Advance the route: drop the waypoint we just travelled to, then
@@ -437,6 +441,7 @@ export default function GamePage() {
                 travelDistanceKm={conn.distanceKm}
                 travelSpeedKmh={conn.speedKmh}
                 travelTransportSlug={conn.transportSlug}
+                travelBaseCostMultiplier={conn.baseCostMultiplier}
                 isOpen={travelModalOpen}
                 onClose={() => setTravelModalOpen(false)}
                 onConfirm={handleTravelConfirm}

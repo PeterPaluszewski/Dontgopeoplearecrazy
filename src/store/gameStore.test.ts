@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
 import { useGameStore } from '@/store/gameStore';
+import { describe, expect, it } from 'vitest';
 
 describe('GameStore', () => {
   it('should initialize with default values', () => {
@@ -8,6 +8,7 @@ describe('GameStore', () => {
     expect(state.food).toBe(100);
     expect(state.water).toBe(100);
     expect(state.energy).toBe(100);
+    expect(state.money).toBe(200);
     expect(state.inventory).toEqual([]);
     expect(state.visitedLocationIds).toEqual([]);
     expect(state.isActive).toBe(false);

@@ -33,6 +33,7 @@ describe('TravelModal', () => {
     travelDistanceKm: 200,
     travelSpeedKmh: 90,
     travelTransportSlug: 'car',
+    travelBaseCostMultiplier: 0,
     isOpen: true,
     onClose: mockOnClose,
     onConfirm: mockOnConfirm,
@@ -44,6 +45,7 @@ describe('TravelModal', () => {
       food: 75,
       water: 80,
       energy: 85,
+      money: 200,
     });
   });
 
@@ -85,6 +87,7 @@ describe('TravelModal', () => {
       food: 10,
       water: 10,
       energy: 10,
+      money: 200,
     });
 
     render(<TravelModal {...defaultProps()} />);
@@ -99,6 +102,7 @@ describe('TravelModal', () => {
       food: 10,
       water: 10,
       energy: 10,
+      money: 200,
     });
 
     render(<TravelModal {...defaultProps()} />);
@@ -113,6 +117,7 @@ describe('TravelModal', () => {
       food: 100,
       water: 100,
       energy: 100,
+      money: 200,
     });
 
     render(<TravelModal {...defaultProps()} />);
@@ -127,6 +132,7 @@ describe('TravelModal', () => {
       food: 10,
       water: 10,
       energy: 10,
+      money: 200,
     });
 
     render(<TravelModal {...defaultProps()} />);
@@ -141,6 +147,7 @@ describe('TravelModal', () => {
       food: 100,
       water: 100,
       energy: 100,
+      money: 200,
     });
 
     render(<TravelModal {...defaultProps()} />);
@@ -168,6 +175,7 @@ describe('TravelModal', () => {
       food: 100,
       water: 100,
       energy: 100,
+      money: 200,
     });
 
     render(<TravelModal {...defaultProps()} />);
@@ -182,6 +190,7 @@ describe('TravelModal', () => {
       food: 10,
       water: 10,
       energy: 10,
+      money: 200,
     });
 
     render(<TravelModal {...defaultProps()} />);

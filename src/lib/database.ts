@@ -33,7 +33,7 @@ async function getConnectionMaps(supabase: ReturnType<typeof createClient>): Pro
     is_bidirectional,
     connection_transport_types (
       is_forward,
-      transport_types ( slug, speed_kmh )
+      transport_types ( slug, speed_kmh, base_cost_multiplier )
     )
   `);
 
@@ -75,6 +75,7 @@ async function getConnectionMaps(supabase: ReturnType<typeof createClient>): Pro
       distanceKm,
       transportSlug: fastest?.transport_types?.slug ?? 'on_foot',
       speedKmh: fastest?.transport_types?.speed_kmh ?? 5,
+      baseCostMultiplier: fastest?.transport_types?.base_cost_multiplier ?? 0,
     };
     detailMap.set(`${row.from_id}:${row.to_id}`, forwardDetail);
 
@@ -95,6 +96,8 @@ async function getConnectionMaps(supabase: ReturnType<typeof createClient>): Pro
         distanceKm,
         transportSlug: fastestRev?.transport_types?.slug ?? forwardDetail.transportSlug,
         speedKmh: fastestRev?.transport_types?.speed_kmh ?? forwardDetail.speedKmh,
+        baseCostMultiplier:
+          fastestRev?.transport_types?.base_cost_multiplier ?? forwardDetail.baseCostMultiplier,
       };
       detailMap.set(`${row.to_id}:${row.from_id}`, reverseDetail);
     }
@@ -295,6 +298,7 @@ export async function getUserGameStates(userId: string): Promise<GameState[]> {
     food: state.food,
     water: state.water,
     energy: state.energy,
+    money: state.money ?? 200,
     inventory: state.inventory || [],
     visitedLocationIds: state.visited_location_ids || [],
     isActive: state.is_active,
@@ -330,6 +334,7 @@ export async function getActiveGameState(userId: string): Promise<GameState | nu
     food: data.food,
     water: data.water,
     energy: data.energy,
+    money: data.money ?? 200,
     inventory: data.inventory || [],
     visitedLocationIds: data.visited_location_ids || [],
     isActive: data.is_active,
@@ -379,6 +384,7 @@ export async function createGameState(
     food: data.food,
     water: data.water,
     energy: data.energy,
+    money: data.money ?? 200,
     inventory: data.inventory || [],
     visitedLocationIds: data.visited_location_ids || [],
     isActive: data.is_active,
