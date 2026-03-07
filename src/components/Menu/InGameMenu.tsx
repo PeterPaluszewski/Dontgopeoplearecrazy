@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import SettingsModal from '@/components/Menu/SettingsModal';
 import { saveGame } from '@/lib/save-load';
 import { useGameStore } from '@/store/gameStore';
-import SettingsModal from '@/components/Menu/SettingsModal';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 
 interface InGameMenuProps {
@@ -40,6 +40,7 @@ export default function InGameMenu({ isOpen, onClose }: InGameMenuProps) {
       food: gameState.food,
       water: gameState.water,
       energy: gameState.energy,
+      money: gameState.money ?? 200,
       inventory: gameState.inventory,
       visitedLocationIds: gameState.visitedLocationIds,
       isActive: true,
@@ -140,10 +141,7 @@ export default function InGameMenu({ isOpen, onClose }: InGameMenuProps) {
       </div>
 
       {/* Settings Modal */}
-      <SettingsModal
-        isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
-      />
+      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </>
   );
 }

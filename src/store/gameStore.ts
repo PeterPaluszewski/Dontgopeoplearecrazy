@@ -10,7 +10,7 @@ interface GameStore extends Omit<GameState, 'userId' | 'createdAt' | 'updatedAt'
   setCurrentLocation: (locationId: string) => void;
   setCurrentLocationId: (locationId: string) => void;
   visitLocation: (locationId: string) => void;
-  travelToLocation: (locationId: string, cost: TravelCost) => void;
+  travelToLocation: (locationId: string, cost: TravelCost, travelDays?: number) => void;
   resetGame: () => void;
   loadGame: (gameState: GameState) => void;
   loadGameState: (gameState: GameState) => void;
@@ -24,11 +24,13 @@ const initialState = {
   food: 100,
   water: 100,
   energy: 100,
+  money: 200,
   inventory: [] as InventoryItem[],
   visitedLocationIds: [] as string[],
   isActive: false,
   difficulty: undefined as 'easy' | 'normal' | 'hard' | undefined,
   characterName: undefined as string | undefined,
+  totalTravelDays: 0,
 };
 
 export const useGameStore = create<GameStore>((set) => ({
@@ -79,12 +81,13 @@ export const useGameStore = create<GameStore>((set) => ({
       visitedLocationIds: [...state.visitedLocationIds, locationId],
     })),
 
-  travelToLocation: (locationId, cost) =>
+  travelToLocation: (locationId, cost, travelDays = 1) =>
     set((state) => {
       // Deduct travel costs
       const newFood = Math.max(0, state.food - cost.food);
       const newWater = Math.max(0, state.water - cost.water);
       const newEnergy = Math.max(0, state.energy - cost.energy);
+      const newMoney = Math.max(0, (state.money ?? 200) - cost.money);
 
       // Mark as visited if not already
       const newVisitedIds = state.visitedLocationIds.includes(locationId)
@@ -96,7 +99,9 @@ export const useGameStore = create<GameStore>((set) => ({
         food: newFood,
         water: newWater,
         energy: newEnergy,
+        money: newMoney,
         visitedLocationIds: newVisitedIds,
+        totalTravelDays: (state.totalTravelDays ?? 0) + travelDays,
       };
     }),
 
@@ -109,11 +114,13 @@ export const useGameStore = create<GameStore>((set) => ({
       food: gameState.food,
       water: gameState.water,
       energy: gameState.energy,
+      money: gameState.money ?? 200,
       inventory: gameState.inventory,
       visitedLocationIds: gameState.visitedLocationIds,
       isActive: gameState.isActive,
       difficulty: gameState.difficulty,
       characterName: gameState.characterName,
+      totalTravelDays: gameState.totalTravelDays ?? 0,
     }),
 
   loadGameState: (gameState) =>
@@ -123,11 +130,13 @@ export const useGameStore = create<GameStore>((set) => ({
       food: gameState.food,
       water: gameState.water,
       energy: gameState.energy,
+      money: gameState.money ?? 200,
       inventory: gameState.inventory,
       visitedLocationIds: gameState.visitedLocationIds,
       isActive: gameState.isActive,
       difficulty: gameState.difficulty,
       characterName: gameState.characterName,
+      totalTravelDays: gameState.totalTravelDays ?? 0,
     }),
 
   saveGame: async () => {
@@ -138,6 +147,7 @@ export const useGameStore = create<GameStore>((set) => ({
       food: state.food,
       water: state.water,
       energy: state.energy,
+      money: state.money ?? 200,
       inventory: state.inventory,
       visitedLocationIds: state.visitedLocationIds,
       isActive: state.isActive,
@@ -161,9 +171,11 @@ export const useGameStore = create<GameStore>((set) => ({
         food: result.gameState.food,
         water: result.gameState.water,
         energy: result.gameState.energy,
+        money: result.gameState.money ?? 200,
         inventory: result.gameState.inventory,
         visitedLocationIds: result.gameState.visitedLocationIds,
         isActive: result.gameState.isActive,
+        totalTravelDays: result.gameState.totalTravelDays ?? 0,
       });
     }
 

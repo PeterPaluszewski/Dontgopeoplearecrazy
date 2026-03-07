@@ -9,7 +9,7 @@ vi.mock('../supabase', () => ({
 
 describe('Menu System - Save/Load Functions', () => {
   const mockUser = { id: 'test-user-id' };
-  
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -43,7 +43,7 @@ describe('Menu System - Save/Load Functions', () => {
 
       expect(result.success).toBe(true);
       expect(result.gameStateId).toBe('new-game-id');
-      
+
       // Verify insert was called with correct data
       expect(mockInsert).toHaveBeenCalledWith({
         user_id: mockUser.id,
@@ -86,7 +86,7 @@ describe('Menu System - Save/Load Functions', () => {
       const result = await createNewGame('1', 'normal');
 
       expect(result.success).toBe(true);
-      
+
       // Verify character_name is undefined when not provided
       expect(mockInsert).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -341,6 +341,7 @@ describe('Menu System - Save/Load Functions', () => {
         food: 50,
         water: 60,
         energy: 70,
+        money: 200,
         inventory: [],
         visitedLocationIds: ['1', '2'],
         isActive: true,

@@ -1,4 +1,5 @@
 import type {
+  ConnectionDetail,
   GameEvent,
   GameState,
   Item,
@@ -13,42 +14,131 @@ import { createClient } from './supabase';
 // ============================================
 
 /**
- * Fetch all location_connections rows and return a map of
- * locationId -> connectedLocationIds[], treating connections as bidirectional.
+ * Fetches all location_connections joined with their fastest available
+ * transport type (by speed_kmh). Returns two maps:
+ *  - connectionMap: locationId → connectedLocationIds[]  (for quick reachability checks)
+ *  - detailMap:     "fromId:toId" → ConnectionDetail      (for travel cost/day calculation)
  */
-async function getConnectionMap(
-  supabase: ReturnType<typeof createClient>
-): Promise<Map<string, string[]>> {
-  const { data, error } = await supabase
-    .from('location_connections')
-    .select('from_id, to_id, is_bidirectional');
+async function getConnectionMaps(supabase: ReturnType<typeof createClient>): Promise<{
+  connectionMap: Map<string, string[]>;
+  detailMap: Map<string, ConnectionDetail[]>;
+}> {
+  // Fetch connections with their transport options in one join.
+  // We select the transport type with the highest speed_kmh per connection.
+  const { data, error } = await supabase.from('location_connections').select(`
+    id,
+    from_id,
+    to_id,
+    distance_km,
+    is_bidirectional,
+    connection_transport_types (
+      is_forward,
+      transport_types ( slug, speed_kmh, base_cost_multiplier )
+    )
+  `);
 
   if (error) {
     console.error('Error fetching location connections:', error);
     throw error;
   }
 
-  const map = new Map<string, string[]>();
-  const add = (key: string, value: string) => {
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(value);
+  const connectionMap = new Map<string, string[]>();
+  const detailMap = new Map<string, ConnectionDetail[]>();
+
+  const addConn = (key: string, value: string) => {
+    if (!connectionMap.has(key)) connectionMap.set(key, []);
+    connectionMap.get(key)!.push(value);
   };
 
-  for (const row of data || []) {
-    add(row.from_id, row.to_id);
+  const addDetail = (key: string, detail: ConnectionDetail) => {
+    if (!detailMap.has(key)) detailMap.set(key, []);
+    detailMap.get(key)!.push(detail);
+  };
+
+  // Supabase infers many-to-one FK joins as arrays in its generated types, but
+  // PostgREST returns them as a single object at runtime. Cast via unknown so we
+  // can model the actual runtime shape accurately.
+  type TransportTypeRow = { slug: string; speed_kmh: number; base_cost_multiplier: number } | null;
+  type ConnectionTransportTypeRow = {
+    is_forward: boolean | null;
+    transport_types: TransportTypeRow;
+  };
+  type ConnectionRow = {
+    from_id: string;
+    to_id: string;
+    distance_km: number | null;
+    is_bidirectional: boolean;
+    connection_transport_types: ConnectionTransportTypeRow[] | null;
+  };
+
+  for (const row of (data || []) as unknown as ConnectionRow[]) {
+    addConn(row.from_id, row.to_id);
     if (row.is_bidirectional) {
-      add(row.to_id, row.from_id);
+      addConn(row.to_id, row.from_id);
+    }
+
+    const distanceKm: number = row.distance_km ?? 0;
+
+    const forwardOptions = (row.connection_transport_types ?? []).filter(
+      (ctt) => ctt.is_forward === true || ctt.is_forward === null
+    );
+
+    if (forwardOptions.length === 0) {
+      // Fallback: walking only
+      addDetail(`${row.from_id}:${row.to_id}`, {
+        toId: row.to_id,
+        distanceKm,
+        transportSlug: 'on_foot',
+        speedKmh: 5,
+        baseCostMultiplier: 0,
+      });
+    } else {
+      for (const ctt of forwardOptions) {
+        const tt = ctt.transport_types;
+        addDetail(`${row.from_id}:${row.to_id}`, {
+          toId: row.to_id,
+          distanceKm,
+          transportSlug: tt?.slug ?? 'on_foot',
+          speedKmh: tt?.speed_kmh ?? 5,
+          baseCostMultiplier: tt?.base_cost_multiplier ?? 0,
+        });
+      }
+    }
+
+    if (row.is_bidirectional) {
+      const reverseOptions = (row.connection_transport_types ?? []).filter(
+        (ctt) => ctt.is_forward === false
+      );
+
+      if (reverseOptions.length === 0) {
+        // Mirror forward options for reverse direction
+        const fwdDetails = detailMap.get(`${row.from_id}:${row.to_id}`) ?? [];
+        for (const fwd of fwdDetails) {
+          addDetail(`${row.to_id}:${row.from_id}`, { ...fwd, toId: row.from_id });
+        }
+      } else {
+        for (const ctt of reverseOptions) {
+          const tt = ctt.transport_types;
+          addDetail(`${row.to_id}:${row.from_id}`, {
+            toId: row.from_id,
+            distanceKm,
+            transportSlug: tt?.slug ?? 'on_foot',
+            speedKmh: tt?.speed_kmh ?? 5,
+            baseCostMultiplier: tt?.base_cost_multiplier ?? 0,
+          });
+        }
+      }
     }
   }
 
-  return map;
+  return { connectionMap, detailMap };
 }
 
 export async function getAllLocations(): Promise<Location[]> {
   const supabase = createClient();
-  const [locResult, connectionMap] = await Promise.all([
+  const [locResult, { connectionMap, detailMap }] = await Promise.all([
     supabase.from('locations').select('*').order('name'),
-    getConnectionMap(supabase),
+    getConnectionMaps(supabase),
   ]);
 
   if (locResult.error) {
@@ -56,17 +146,27 @@ export async function getAllLocations(): Promise<Location[]> {
     throw locResult.error;
   }
 
-  return (locResult.data || []).map((loc) => ({
-    id: loc.id,
-    name: loc.name,
-    description: loc.description || '',
-    latitude: loc.latitude,
-    longitude: loc.longitude,
-    difficultyMultiplier: loc.difficulty_multiplier,
-    isCoastal: loc.is_coastal ?? false,
-    region: loc.region ?? 'unknown',
-    connectedLocationIds: connectionMap.get(loc.id) ?? [],
-  }));
+  return (locResult.data || []).map((loc) => {
+    const connectedLocationIds = connectionMap.get(loc.id) ?? [];
+    // Collect all transport options for each outbound leg, sorted slowest→fastest
+    const connections: ConnectionDetail[] = connectedLocationIds.flatMap((toId) => {
+      const options = detailMap.get(`${loc.id}:${toId}`) ?? [];
+      return options.slice().sort((a, b) => a.speedKmh - b.speedKmh);
+    });
+
+    return {
+      id: loc.id,
+      name: loc.name,
+      description: loc.description || '',
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+      difficultyMultiplier: loc.difficulty_multiplier,
+      isCoastal: loc.is_coastal ?? false,
+      region: loc.region ?? 'unknown',
+      connectedLocationIds,
+      connections,
+    };
+  });
 }
 
 export async function getLocationById(id: string): Promise<Location | null> {
@@ -106,6 +206,7 @@ export async function getLocationById(id: string): Promise<Location | null> {
     isCoastal: data.is_coastal ?? false,
     region: data.region ?? 'unknown',
     connectedLocationIds,
+    connections: [],
   };
 }
 
@@ -227,6 +328,7 @@ export async function getUserGameStates(userId: string): Promise<GameState[]> {
     food: state.food,
     water: state.water,
     energy: state.energy,
+    money: state.money ?? 200,
     inventory: state.inventory || [],
     visitedLocationIds: state.visited_location_ids || [],
     isActive: state.is_active,
@@ -262,6 +364,7 @@ export async function getActiveGameState(userId: string): Promise<GameState | nu
     food: data.food,
     water: data.water,
     energy: data.energy,
+    money: data.money ?? 200,
     inventory: data.inventory || [],
     visitedLocationIds: data.visited_location_ids || [],
     isActive: data.is_active,
@@ -311,6 +414,7 @@ export async function createGameState(
     food: data.food,
     water: data.water,
     energy: data.energy,
+    money: data.money ?? 200,
     inventory: data.inventory || [],
     visitedLocationIds: data.visited_location_ids || [],
     isActive: data.is_active,

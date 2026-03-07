@@ -27,6 +27,19 @@ export interface LocationConnection {
   transportOptions?: ConnectionTransportType[];
 }
 
+/**
+ * Lightweight travel detail for one connection endpoint + one transport mode,
+ * pre-joined from location_connections + connection_transport_types + transport_types.
+ */
+export interface ConnectionDetail {
+  toId: string;
+  distanceKm: number;
+  transportSlug: string;
+  speedKmh: number;
+  /** Multiplier applied to the base money cost per day (1.0 = normal, higher = more expensive). */
+  baseCostMultiplier: number;
+}
+
 export interface Location {
   id: string;
   name: string;
@@ -43,6 +56,12 @@ export interface Location {
   region: string;
   /** IDs of directly reachable locations — assembled from the location_connections table */
   connectedLocationIds: string[];
+  /**
+   * All available transport options per outbound connection, one entry per transport type.
+   * Populated by getAllLocations(). Each unique `toId` may appear multiple times (one per mode).
+   * Sorted by speedKmh ascending (slowest first) so the UI can present cheapest → fastest.
+   */
+  connections: ConnectionDetail[];
 }
 
 export interface Item {
@@ -68,11 +87,14 @@ export interface GameState {
   food: number;
   water: number;
   energy: number;
+  money: number;
   inventory: InventoryItem[];
   visitedLocationIds: string[];
   isActive: boolean;
   difficulty?: 'easy' | 'normal' | 'hard';
   characterName?: string;
+  /** Total fractional travel days elapsed since the game started. Used for the in-game clock. */
+  totalTravelDays?: number;
   createdAt: string;
   updatedAt: string;
 }

@@ -48,6 +48,7 @@ describe('LocationMarker', () => {
     isCoastal: false,
     region: 'europe_mainland',
     connectedLocationIds: ['2', '3'],
+    connections: [],
   };
 
   let mockOnClick: (ctrlKey: boolean) => void;

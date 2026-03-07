@@ -38,7 +38,7 @@ function ResourceBar({ type, current, max, icon, color, bgColor }: ResourceBarPr
 }
 
 export default function ResourcePanel() {
-  const { food, water, energy } = useGameStore();
+  const { food, water, energy, money } = useGameStore();
 
   const FOOD_MAX = 100;
   const WATER_MAX = 100;
@@ -75,6 +75,20 @@ export default function ResourcePanel() {
           color="bg-yellow-500"
           bgColor="bg-gray-700"
         />
+        {/* Money — shown as a flat amount, not a depletion bar */}
+        <div className="flex items-center gap-3 pt-1 border-t border-gray-700">
+          <div className="text-3xl">💰</div>
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-white">money</span>
+              <span
+                className={`text-sm font-bold ${(money ?? 0) < 20 ? 'text-red-400' : (money ?? 0) < 50 ? 'text-yellow-400' : 'text-gray-300'}`}
+              >
+                €{money ?? 0}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Warning messages */}

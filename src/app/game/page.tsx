@@ -1,6 +1,7 @@
 'use client';
 
 import EventModal from '@/components/EventModal/EventModal';
+import GameClock from '@/components/GameClock/GameClock';
 import type { GlobeDebugInfo } from '@/components/Globe/Globe';
 import InventoryPanel from '@/components/InventoryPanel/InventoryPanel';
 import LocationInfo from '@/components/LocationInfo/LocationInfo';
@@ -13,9 +14,14 @@ import { calculateGlobeQuaternion } from '@/lib/globe-utils';
 import { findLocationById, getDefaultLocation } from '@/lib/location-utils';
 import { appendToRoute, areDirectlyConnected } from '@/lib/route-utils';
 import { createClient } from '@/lib/supabase';
-import { calculateTravelCost } from '@/lib/travel-utils';
+import {
+  calculateTravelCost,
+  calculateTravelDays,
+  getAllConnectionOptions,
+  getConnectionDetail,
+} from '@/lib/travel-utils';
 import { useGameStore } from '@/store/gameStore';
-import type { Location } from '@/types/game';
+import type { ConnectionDetail, Location } from '@/types/game';
 import type { User } from '@supabase/supabase-js';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
@@ -161,11 +167,16 @@ export default function GamePage() {
     setTravelModalOpen(true);
   };
 
-  const handleTravelConfirm = async () => {
+  const handleTravelConfirm = async (chosenOption: ConnectionDetail) => {
     if (!travelDestination) return;
 
-    const cost = calculateTravelCost(1, travelDestination.difficultyMultiplier);
-    travelToLocation(travelDestination.id, cost);
+    const travelDays = calculateTravelDays(chosenOption.distanceKm, chosenOption.speedKmh);
+    const cost = calculateTravelCost(
+      travelDays,
+      travelDestination.difficultyMultiplier,
+      chosenOption.baseCostMultiplier
+    );
+    travelToLocation(travelDestination.id, cost, travelDays);
 
     // Advance the route: drop the waypoint we just travelled to, then
     // select the next waypoint (so Travel Here stays active for the next leg).
@@ -203,6 +214,7 @@ export default function GamePage() {
       <nav className="bg-gray-800 border-b border-gray-700 px-6 py-4 z-10">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <h1 className="text-2xl font-bold">🎒 Backpacking Adventure</h1>
+          <GameClock />
           <div className="flex items-center gap-4">
             <button
               onClick={() => setShowInGameMenu(true)}
@@ -247,6 +259,34 @@ export default function GamePage() {
               !!selectedLocation &&
               selectedLocation.id !== currentLocationId &&
               areDirectlyConnected(locations, currentLocationId, selectedLocation.id)
+            }
+            travelDays={
+              currentLocationId && selectedLocation && selectedLocation.id !== currentLocationId
+                ? (() => {
+                    const conn = getConnectionDetail(
+                      locations,
+                      currentLocationId,
+                      selectedLocation.id
+                    );
+                    return calculateTravelDays(conn.distanceKm, conn.speedKmh);
+                  })()
+                : undefined
+            }
+            travelDistanceKm={
+              currentLocationId && selectedLocation && selectedLocation.id !== currentLocationId
+                ? getConnectionDetail(locations, currentLocationId, selectedLocation.id).distanceKm
+                : undefined
+            }
+            travelSpeedKmh={
+              currentLocationId && selectedLocation && selectedLocation.id !== currentLocationId
+                ? getConnectionDetail(locations, currentLocationId, selectedLocation.id).speedKmh
+                : undefined
+            }
+            travelTransportSlug={
+              currentLocationId && selectedLocation && selectedLocation.id !== currentLocationId
+                ? getConnectionDetail(locations, currentLocationId, selectedLocation.id)
+                    .transportSlug
+                : undefined
             }
           />
 
@@ -394,14 +434,23 @@ export default function GamePage() {
         />
 
         {/* Travel Modal */}
-        {travelDestination && (
-          <TravelModal
-            destination={travelDestination}
-            isOpen={travelModalOpen}
-            onClose={() => setTravelModalOpen(false)}
-            onConfirm={handleTravelConfirm}
-          />
-        )}
+        {travelDestination &&
+          (() => {
+            const connectionOptions = getAllConnectionOptions(
+              locations,
+              currentLocationId,
+              travelDestination.id
+            );
+            return (
+              <TravelModal
+                destination={travelDestination}
+                connectionOptions={connectionOptions}
+                isOpen={travelModalOpen}
+                onClose={() => setTravelModalOpen(false)}
+                onConfirm={handleTravelConfirm}
+              />
+            );
+          })()}
 
         {/* Event Modal */}
         {currentEvent && (

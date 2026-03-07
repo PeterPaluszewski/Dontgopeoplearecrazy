@@ -16,6 +16,7 @@ describe('save-load', () => {
     food: 80,
     water: 90,
     energy: 70,
+    money: 200,
     inventory: [
       {
         item: {

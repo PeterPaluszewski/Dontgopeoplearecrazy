@@ -60,6 +60,7 @@ describe('Globe', () => {
       isCoastal: false,
       region: 'europe_mainland',
       connectedLocationIds: ['2', '3'],
+      connections: [],
     },
     {
       id: '2',
@@ -71,6 +72,7 @@ describe('Globe', () => {
       isCoastal: false,
       region: 'british_isles',
       connectedLocationIds: ['1'],
+      connections: [],
     },
     {
       id: '3',
@@ -82,6 +84,7 @@ describe('Globe', () => {
       isCoastal: false,
       region: 'europe_mainland',
       connectedLocationIds: ['1'],
+      connections: [],
     },
   ];
 

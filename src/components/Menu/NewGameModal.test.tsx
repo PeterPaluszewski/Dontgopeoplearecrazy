@@ -50,6 +50,7 @@ describe('NewGameModal', () => {
       isCoastal: false,
       region: 'europe_mainland',
       connectedLocationIds: [],
+      connections: [],
     },
     {
       id: 'berlin-uuid',
@@ -61,6 +62,7 @@ describe('NewGameModal', () => {
       isCoastal: false,
       region: 'europe_mainland',
       connectedLocationIds: [],
+      connections: [],
     },
     {
       id: 'amsterdam-uuid',
@@ -72,6 +74,7 @@ describe('NewGameModal', () => {
       isCoastal: true,
       region: 'europe_mainland',
       connectedLocationIds: [],
+      connections: [],
     },
     {
       id: 'tokyo-uuid',
@@ -83,6 +86,7 @@ describe('NewGameModal', () => {
       isCoastal: true,
       region: 'japan',
       connectedLocationIds: [],
+      connections: [],
     },
     {
       id: 'newyork-uuid',
@@ -94,6 +98,7 @@ describe('NewGameModal', () => {
       isCoastal: true,
       region: 'north_america',
       connectedLocationIds: [],
+      connections: [],
     },
   ];
 

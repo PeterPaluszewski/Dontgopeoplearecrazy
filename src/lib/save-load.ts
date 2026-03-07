@@ -26,9 +26,11 @@ export async function saveGame(
       food: gameState.food,
       water: gameState.water,
       energy: gameState.energy,
+      money: gameState.money ?? 200,
       inventory: gameState.inventory,
       visited_location_ids: gameState.visitedLocationIds,
       is_active: gameState.isActive ?? true,
+      total_travel_days: gameState.totalTravelDays ?? 0,
     };
 
     // If ID exists, update existing save
@@ -113,11 +115,13 @@ export async function loadGame(): Promise<{
       food: data.food,
       water: data.water,
       energy: data.energy,
+      money: data.money ?? 200,
       inventory: data.inventory || [],
       visitedLocationIds: data.visited_location_ids || [],
       isActive: data.is_active,
       difficulty: data.difficulty,
       characterName: data.character_name,
+      totalTravelDays: data.total_travel_days ?? 0,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
     };
@@ -167,11 +171,13 @@ export async function loadAllSaves(): Promise<{
       food: save.food,
       water: save.water,
       energy: save.energy,
+      money: save.money ?? 200,
       inventory: save.inventory || [],
       visitedLocationIds: save.visited_location_ids || [],
       isActive: save.is_active,
       difficulty: save.difficulty,
       characterName: save.character_name,
+      totalTravelDays: save.total_travel_days ?? 0,
       createdAt: save.created_at,
       updatedAt: save.updated_at,
     }));
@@ -283,7 +289,7 @@ export async function createNewGame(
     console.error('Error creating new game - Caught exception:', error);
     console.error('Error creating new game - Type:', typeof error);
     console.error('Error creating new game - Constructor:', error?.constructor?.name);
-    
+
     const errorMsg = error instanceof Error ? error.message : String(error);
     return { success: false, error: errorMsg || 'Unknown error occurred' };
   }

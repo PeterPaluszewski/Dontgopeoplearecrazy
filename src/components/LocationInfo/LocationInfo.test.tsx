@@ -20,6 +20,7 @@ describe('LocationInfo', () => {
     isCoastal: false,
     region: 'europe_mainland',
     connectedLocationIds: ['2', '3', '4'],
+    connections: [],
   };
 
   it('should show placeholder when no location is selected', () => {
@@ -221,5 +222,66 @@ describe('LocationInfo', () => {
     );
 
     expect(screen.queryByRole('button', { name: /Travel Here/i })).not.toBeInTheDocument();
+  });
+
+  it('should show formatted travel duration when travel props are provided', () => {
+    vi.mocked(useGameStore).mockReturnValue({
+      visitedLocationIds: [],
+      currentLocationId: 'other',
+    } as ReturnType<typeof useGameStore>);
+
+    const onTravelClick = vi.fn();
+    render(
+      <LocationInfo
+        location={mockLocation}
+        onTravelClick={onTravelClick}
+        isReachable={true}
+        travelDays={1}
+        travelDistanceKm={200}
+        travelSpeedKmh={90}
+        travelTransportSlug="car"
+      />
+    );
+
+    // 200km at 90km/h = 2.22h → "2 hours by car"
+    expect(screen.getByText(/by car/i)).toBeInTheDocument();
+  });
+
+  it('should show multi-day journey with transport name', () => {
+    vi.mocked(useGameStore).mockReturnValue({
+      visitedLocationIds: [],
+      currentLocationId: 'other',
+    } as ReturnType<typeof useGameStore>);
+
+    const onTravelClick = vi.fn();
+    render(
+      <LocationInfo
+        location={mockLocation}
+        onTravelClick={onTravelClick}
+        isReachable={true}
+        travelDays={2}
+        travelDistanceKm={9217}
+        travelSpeedKmh={800}
+        travelTransportSlug="plane"
+      />
+    );
+
+    // 9217km at 800km/h = 11.52h → "1 day 4 hours by plane"
+    expect(screen.getByText(/by plane/i)).toBeInTheDocument();
+    expect(screen.getByText(/day/i)).toBeInTheDocument();
+  });
+
+  it('should not show travel duration when travel props are not provided', () => {
+    vi.mocked(useGameStore).mockReturnValue({
+      visitedLocationIds: [],
+      currentLocationId: 'other',
+    } as ReturnType<typeof useGameStore>);
+
+    const onTravelClick = vi.fn();
+    render(
+      <LocationInfo location={mockLocation} onTravelClick={onTravelClick} isReachable={true} />
+    );
+
+    expect(screen.queryByText(/by /i)).not.toBeInTheDocument();
   });
 });
