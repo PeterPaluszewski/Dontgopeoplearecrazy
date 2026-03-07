@@ -29,6 +29,7 @@ export async function saveGame(
       inventory: gameState.inventory,
       visited_location_ids: gameState.visitedLocationIds,
       is_active: gameState.isActive ?? true,
+      total_travel_days: gameState.totalTravelDays ?? 0,
     };
 
     // If ID exists, update existing save
@@ -118,6 +119,7 @@ export async function loadGame(): Promise<{
       isActive: data.is_active,
       difficulty: data.difficulty,
       characterName: data.character_name,
+      totalTravelDays: data.total_travel_days ?? 0,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
     };
@@ -172,6 +174,7 @@ export async function loadAllSaves(): Promise<{
       isActive: save.is_active,
       difficulty: save.difficulty,
       characterName: save.character_name,
+      totalTravelDays: save.total_travel_days ?? 0,
       createdAt: save.created_at,
       updatedAt: save.updated_at,
     }));
@@ -283,7 +286,7 @@ export async function createNewGame(
     console.error('Error creating new game - Caught exception:', error);
     console.error('Error creating new game - Type:', typeof error);
     console.error('Error creating new game - Constructor:', error?.constructor?.name);
-    
+
     const errorMsg = error instanceof Error ? error.message : String(error);
     return { success: false, error: errorMsg || 'Unknown error occurred' };
   }

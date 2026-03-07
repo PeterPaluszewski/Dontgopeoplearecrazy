@@ -73,6 +73,8 @@ export interface GameState {
   isActive: boolean;
   difficulty?: 'easy' | 'normal' | 'hard';
   characterName?: string;
+  /** Total fractional travel days elapsed since the game started. Used for the in-game clock. */
+  totalTravelDays?: number;
   createdAt: string;
   updatedAt: string;
 }

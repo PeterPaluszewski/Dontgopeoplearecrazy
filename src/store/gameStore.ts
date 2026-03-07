@@ -10,7 +10,7 @@ interface GameStore extends Omit<GameState, 'userId' | 'createdAt' | 'updatedAt'
   setCurrentLocation: (locationId: string) => void;
   setCurrentLocationId: (locationId: string) => void;
   visitLocation: (locationId: string) => void;
-  travelToLocation: (locationId: string, cost: TravelCost) => void;
+  travelToLocation: (locationId: string, cost: TravelCost, travelDays?: number) => void;
   resetGame: () => void;
   loadGame: (gameState: GameState) => void;
   loadGameState: (gameState: GameState) => void;
@@ -29,6 +29,7 @@ const initialState = {
   isActive: false,
   difficulty: undefined as 'easy' | 'normal' | 'hard' | undefined,
   characterName: undefined as string | undefined,
+  totalTravelDays: 0,
 };
 
 export const useGameStore = create<GameStore>((set) => ({
@@ -79,7 +80,7 @@ export const useGameStore = create<GameStore>((set) => ({
       visitedLocationIds: [...state.visitedLocationIds, locationId],
     })),
 
-  travelToLocation: (locationId, cost) =>
+  travelToLocation: (locationId, cost, travelDays = 1) =>
     set((state) => {
       // Deduct travel costs
       const newFood = Math.max(0, state.food - cost.food);
@@ -97,6 +98,7 @@ export const useGameStore = create<GameStore>((set) => ({
         water: newWater,
         energy: newEnergy,
         visitedLocationIds: newVisitedIds,
+        totalTravelDays: (state.totalTravelDays ?? 0) + travelDays,
       };
     }),
 
@@ -114,6 +116,7 @@ export const useGameStore = create<GameStore>((set) => ({
       isActive: gameState.isActive,
       difficulty: gameState.difficulty,
       characterName: gameState.characterName,
+      totalTravelDays: gameState.totalTravelDays ?? 0,
     }),
 
   loadGameState: (gameState) =>
@@ -128,6 +131,7 @@ export const useGameStore = create<GameStore>((set) => ({
       isActive: gameState.isActive,
       difficulty: gameState.difficulty,
       characterName: gameState.characterName,
+      totalTravelDays: gameState.totalTravelDays ?? 0,
     }),
 
   saveGame: async () => {
@@ -164,6 +168,7 @@ export const useGameStore = create<GameStore>((set) => ({
         inventory: result.gameState.inventory,
         visitedLocationIds: result.gameState.visitedLocationIds,
         isActive: result.gameState.isActive,
+        totalTravelDays: result.gameState.totalTravelDays ?? 0,
       });
     }
 

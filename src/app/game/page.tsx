@@ -1,6 +1,7 @@
 'use client';
 
 import EventModal from '@/components/EventModal/EventModal';
+import GameClock from '@/components/GameClock/GameClock';
 import type { GlobeDebugInfo } from '@/components/Globe/Globe';
 import InventoryPanel from '@/components/InventoryPanel/InventoryPanel';
 import LocationInfo from '@/components/LocationInfo/LocationInfo';
@@ -203,6 +204,7 @@ export default function GamePage() {
       <nav className="bg-gray-800 border-b border-gray-700 px-6 py-4 z-10">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <h1 className="text-2xl font-bold">🎒 Backpacking Adventure</h1>
+          <GameClock />
           <div className="flex items-center gap-4">
             <button
               onClick={() => setShowInGameMenu(true)}
