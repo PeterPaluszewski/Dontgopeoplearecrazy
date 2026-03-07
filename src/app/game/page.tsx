@@ -139,9 +139,7 @@ export default function GamePage() {
       const next = appendToRoute(locations, baseRoute, currentLocationId, location.id);
       if (next !== baseRoute) {
         setRouteLocationIds(next);
-        // Select the first waypoint so Travel Here is immediately active
-        const firstWaypoint = findLocationById(locations, next[0]);
-        setSelectedLocation(firstWaypoint ?? location);
+        setSelectedLocation(location);
       }
     } else {
       // Plain click: update the info panel selection.
@@ -174,11 +172,7 @@ export default function GamePage() {
     const nextRoute =
       routeLocationIds[0] === travelDestination.id ? routeLocationIds.slice(1) : routeLocationIds;
     setRouteLocationIds(nextRoute);
-    const nextSelected =
-      nextRoute.length > 0
-        ? (findLocationById(locations, nextRoute[0]) ?? travelDestination)
-        : travelDestination;
-    setSelectedLocation(nextSelected);
+    setSelectedLocation(travelDestination);
 
     setTravelDestination(null);
 
@@ -249,16 +243,10 @@ export default function GamePage() {
             location={selectedLocation}
             onTravelClick={handleTravelClick}
             isReachable={
-              !!selectedLocation &&
               !!currentLocationId &&
+              !!selectedLocation &&
               selectedLocation.id !== currentLocationId &&
-              (areDirectlyConnected(locations, currentLocationId, selectedLocation.id) ||
-                routeLocationIds[0] === selectedLocation.id)
-            }
-            nextLocationName={
-              routeLocationIds.length > 0
-                ? findLocationById(locations, routeLocationIds[0])?.name
-                : undefined
+              areDirectlyConnected(locations, currentLocationId, selectedLocation.id)
             }
           />
 
@@ -305,6 +293,19 @@ export default function GamePage() {
               <p className="mt-3 text-xs text-gray-500">
                 Ctrl+click a connected city to extend the route
               </p>
+              {(() => {
+                const nextWaypoint = findLocationById(locations, routeLocationIds[0]);
+                return nextWaypoint ? (
+                  <button
+                    type="button"
+                    onClick={() => handleTravelClick(nextWaypoint)}
+                    className="mt-3 w-full py-2 px-4 rounded-lg font-medium bg-violet-600 text-white hover:bg-violet-500 transition-colors flex items-center justify-center gap-2 text-sm"
+                  >
+                    <span>🗺️</span>
+                    Travel to {nextWaypoint.name}
+                  </button>
+                ) : null;
+              })()}
             </div>
           )}
           <div className="mt-4 bg-gray-800/95 rounded-lg p-4 shadow-xl border border-gray-700 backdrop-blur-sm">

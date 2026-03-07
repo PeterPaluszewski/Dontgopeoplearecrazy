@@ -176,7 +176,7 @@ describe('LocationInfo', () => {
 
     render(<LocationInfo location={mockLocation} isReachable={true} />);
 
-    expect(screen.queryByText('Travel Here')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Travel/i })).not.toBeInTheDocument();
   });
 
   it('should show Travel Here button disabled when isReachable is false', () => {
@@ -220,26 +220,6 @@ describe('LocationInfo', () => {
       <LocationInfo location={mockLocation} onTravelClick={onTravelClick} isReachable={true} />
     );
 
-    expect(screen.queryByText('Travel Here')).not.toBeInTheDocument();
-  });
-
-  it('should show "Travel to {name}" when nextLocationName is provided', () => {
-    vi.mocked(useGameStore).mockReturnValue({
-      visitedLocationIds: [],
-      currentLocationId: 'other',
-    } as ReturnType<typeof useGameStore>);
-
-    const onTravelClick = vi.fn();
-    render(
-      <LocationInfo
-        location={mockLocation}
-        onTravelClick={onTravelClick}
-        isReachable={true}
-        nextLocationName="Berlin"
-      />
-    );
-
-    expect(screen.getByRole('button', { name: /Travel to Berlin/i })).toBeInTheDocument();
-    expect(screen.queryByText('Travel Here')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Travel Here/i })).not.toBeInTheDocument();
   });
 });

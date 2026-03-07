@@ -6,14 +6,12 @@ interface LocationInfoProps {
   location: Location | null;
   onTravelClick?: (location: Location) => void;
   isReachable?: boolean;
-  nextLocationName?: string;
 }
 
 export default function LocationInfo({
   location,
   onTravelClick,
   isReachable = false,
-  nextLocationName,
 }: LocationInfoProps) {
   const { visitedLocationIds, currentLocationId } = useGameStore();
 
@@ -94,7 +92,7 @@ export default function LocationInfo({
             disabled={!canTravel}
           >
             <MapPin className="w-5 h-5" />
-            {nextLocationName ? `Travel to ${nextLocationName}` : 'Travel Here'}
+            Travel Here
           </button>
         </div>
       )}
