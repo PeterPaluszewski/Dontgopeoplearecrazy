@@ -26,15 +26,45 @@
 - **Phase 8**: Travel system — cost formula, random events (30%), resource validation
 - **Phase 9**: Save/Load — auto-save, manual save, multiple slots, Supabase persistence
 - **Phase 10**: Production deployment — Vercel + CI/CD + environment variables
-- **Phase 11 (partial)**: Globe improvements — country borders overlay, connection lines, compass debug, LocationMarker dynamic scale, E2E tests (Playwright), `calculateGlobeQuaternion`
-- **World setup branch**:
-  - 101 world cities (was 10 European) with `region` field
-  - NewGameModal region picker — choose starting continent
-  - Connection lines: only current-location connections shown (reduced noise)
-  - Selected-city focal point: connections update when a city is selected
-  - Route planner: Ctrl+click to build multi-hop routes; violet arcs + waypoint markers
-  - Travel Here button gated on direct connection or active route
-  - Travel to {city} button in route panel; route advances leg by leg after each travel
+- **Phase 11**: Globe UX + World Expansion + Route Planner (see detail below)
+
+### Phase 11 Detail
+
+#### Done
+
+**Globe UX**
+
+- `calculateGlobeQuaternion` — rotates globe to face current location on load
+- `CountryBordersOverlay` — auto-shows at `camera.z <= 3` (zoomed in)
+- `ConnectionLines` — three rendering layers: gray base, amber single-hop highlight, violet route arcs
+- Connection display scoped to current location only (reduced visual noise)
+- Selected-city focal point — base layer connections update when a city marker is clicked
+- `LocationMarker` dynamic scale based on camera distance (`useFrame`)
+- Compass/heading debug overlay (toggleable)
+- E2E tests (Playwright) — login page load + unauthenticated redirect
+
+**World Expansion**
+
+- 101 world cities across all continents (was 10 European)
+- `region` field added to locations; `location-utils.ts` helpers (`getLocationsByRegion`, `getDefaultLocation`, etc.)
+- NewGameModal region picker — choose starting continent before starting a new game
+
+**Route Planner**
+
+- `route-utils.ts`: `areDirectlyConnected`, `getRouteTail`, `canAppendToRoute`, `appendToRoute`
+- Ctrl+click to build multi-hop routes; auto-seeds selected city as first waypoint on first Ctrl+click
+- Violet arcs drawn per leg; amber arc suppressed when route is active
+- Waypoint markers rendered in violet; route panel shows full leg list
+- Travel Here button gated on direct connection (no route) or being the active route's first waypoint
+- "Travel to {city}" button in route panel travels leg by leg; route advances after each travel
+
+#### Still To Do
+
+- Animated globe camera pan to destination when travelling
+- Travel progress indicator (days elapsed, resources draining in real time)
+- Location/region-aware events (events filtered by city or region)
+- Weather / season modifiers on travel cost
+- Danger zone warnings before confirming travel
 
 ### In Progress / Planned
 
