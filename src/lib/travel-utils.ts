@@ -23,21 +23,35 @@ const FALLBACK_TRANSPORT_SLUG = 'on_foot';
 
 /**
  * Find the pre-loaded ConnectionDetail for a specific from→to leg.
- * If the connection isn't in the loaded data, calculates distance from
- * coordinates (haversine) and falls back to walking speed.
+ * Returns the fastest available option (highest speedKmh).
+ * Falls back to walking if no connection data is found.
  */
 export function getConnectionDetail(
   locations: Location[],
   fromId: string,
   toId: string
 ): ConnectionDetail {
+  const options = getAllConnectionOptions(locations, fromId, toId);
+  // Return fastest option
+  return options.reduce((best, opt) => (opt.speedKmh > best.speedKmh ? opt : best), options[0]);
+}
+
+/**
+ * Return all available transport options for a from→to leg, sorted slowest→fastest.
+ * Falls back to a single walking entry if no connection data is found.
+ */
+export function getAllConnectionOptions(
+  locations: Location[],
+  fromId: string,
+  toId: string
+): ConnectionDetail[] {
   const from = locations.find((l) => l.id === fromId);
   if (from) {
-    const detail = from.connections.find((c) => c.toId === toId);
-    if (detail) return detail;
+    const options = from.connections.filter((c) => c.toId === toId);
+    if (options.length > 0) return options.slice().sort((a, b) => a.speedKmh - b.speedKmh);
   }
 
-  // Compute distance from coordinates so travel days aren't always 1.
+  // Fallback: compute distance from coordinates, return walking only
   const fromLoc = locations.find((l) => l.id === fromId);
   const toLoc = locations.find((l) => l.id === toId);
   const distanceKm =
@@ -45,13 +59,15 @@ export function getConnectionDetail(
       ? haversineKm(fromLoc.latitude, fromLoc.longitude, toLoc.latitude, toLoc.longitude)
       : 0;
 
-  return {
-    toId,
-    distanceKm,
-    transportSlug: FALLBACK_TRANSPORT_SLUG,
-    speedKmh: FALLBACK_SPEED_KMH,
-    baseCostMultiplier: 0,
-  };
+  return [
+    {
+      toId,
+      distanceKm,
+      transportSlug: FALLBACK_TRANSPORT_SLUG,
+      speedKmh: FALLBACK_SPEED_KMH,
+      baseCostMultiplier: 0,
+    },
+  ];
 }
 
 /**

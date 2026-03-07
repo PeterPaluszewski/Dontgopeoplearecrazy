@@ -6,6 +6,7 @@ import {
   canAffordTravel,
   canTravelToLocation,
   formatTravelDuration,
+  getAllConnectionOptions,
   getConnectionDetail,
   slugToTransportName,
   TRAVEL_HOURS_PER_DAY,
@@ -310,6 +311,92 @@ describe('travel-utils', () => {
 
     it('returns 0 for zero distance', () => {
       expect(calculateTravelDays(0, 90)).toBe(0);
+    });
+  });
+
+  describe('getAllConnectionOptions', () => {
+    const locationWithMultipleTransports: Location = {
+      id: 'london',
+      name: 'London',
+      description: '',
+      latitude: 51.51,
+      longitude: -0.12,
+      difficultyMultiplier: 1,
+      isCoastal: true,
+      region: 'british_isles',
+      connectedLocationIds: ['paris'],
+      connections: [
+        {
+          toId: 'paris',
+          distanceKm: 450,
+          transportSlug: 'on_foot',
+          speedKmh: 5,
+          baseCostMultiplier: 0,
+        },
+        {
+          toId: 'paris',
+          distanceKm: 450,
+          transportSlug: 'train',
+          speedKmh: 300,
+          baseCostMultiplier: 1.5,
+        },
+        {
+          toId: 'paris',
+          distanceKm: 450,
+          transportSlug: 'plane',
+          speedKmh: 800,
+          baseCostMultiplier: 3,
+        },
+      ],
+    };
+    const paris: Location = {
+      id: 'paris',
+      name: 'Paris',
+      description: '',
+      latitude: 48.85,
+      longitude: 2.35,
+      difficultyMultiplier: 1,
+      isCoastal: false,
+      region: 'europe_mainland',
+      connectedLocationIds: ['london'],
+      connections: [
+        {
+          toId: 'london',
+          distanceKm: 450,
+          transportSlug: 'train',
+          speedKmh: 300,
+          baseCostMultiplier: 1.5,
+        },
+      ],
+    };
+    const multiLocs = [locationWithMultipleTransports, paris];
+
+    it('returns all options sorted slowest-to-fastest', () => {
+      const opts = getAllConnectionOptions(multiLocs, 'london', 'paris');
+      expect(opts).toHaveLength(3);
+      expect(opts[0].transportSlug).toBe('on_foot');
+      expect(opts[1].transportSlug).toBe('train');
+      expect(opts[2].transportSlug).toBe('plane');
+    });
+
+    it('returns a single option when only one transport exists', () => {
+      const opts = getAllConnectionOptions(multiLocs, 'paris', 'london');
+      expect(opts).toHaveLength(1);
+      expect(opts[0].transportSlug).toBe('train');
+    });
+
+    it('returns walking fallback when no connection data found', () => {
+      const opts = getAllConnectionOptions(multiLocs, 'paris', 'unknown');
+      expect(opts).toHaveLength(1);
+      expect(opts[0].transportSlug).toBe('on_foot');
+      expect(opts[0].speedKmh).toBe(5);
+      expect(opts[0].baseCostMultiplier).toBe(0);
+    });
+
+    it('getConnectionDetail returns fastest when multiple options exist', () => {
+      const fastest = getConnectionDetail(multiLocs, 'london', 'paris');
+      expect(fastest.transportSlug).toBe('plane');
+      expect(fastest.speedKmh).toBe(800);
     });
   });
 

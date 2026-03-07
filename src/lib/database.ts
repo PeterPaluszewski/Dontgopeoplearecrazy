@@ -21,7 +21,7 @@ import { createClient } from './supabase';
  */
 async function getConnectionMaps(supabase: ReturnType<typeof createClient>): Promise<{
   connectionMap: Map<string, string[]>;
-  detailMap: Map<string, ConnectionDetail>;
+  detailMap: Map<string, ConnectionDetail[]>;
 }> {
   // Fetch connections with their transport options in one join.
   // We select the transport type with the highest speed_kmh per connection.
@@ -43,14 +43,35 @@ async function getConnectionMaps(supabase: ReturnType<typeof createClient>): Pro
   }
 
   const connectionMap = new Map<string, string[]>();
-  const detailMap = new Map<string, ConnectionDetail>();
+  const detailMap = new Map<string, ConnectionDetail[]>();
 
   const addConn = (key: string, value: string) => {
     if (!connectionMap.has(key)) connectionMap.set(key, []);
     connectionMap.get(key)!.push(value);
   };
 
-  for (const row of data || []) {
+  const addDetail = (key: string, detail: ConnectionDetail) => {
+    if (!detailMap.has(key)) detailMap.set(key, []);
+    detailMap.get(key)!.push(detail);
+  };
+
+  // Supabase infers many-to-one FK joins as arrays in its generated types, but
+  // PostgREST returns them as a single object at runtime. Cast via unknown so we
+  // can model the actual runtime shape accurately.
+  type TransportTypeRow = { slug: string; speed_kmh: number; base_cost_multiplier: number } | null;
+  type ConnectionTransportTypeRow = {
+    is_forward: boolean | null;
+    transport_types: TransportTypeRow;
+  };
+  type ConnectionRow = {
+    from_id: string;
+    to_id: string;
+    distance_km: number | null;
+    is_bidirectional: boolean;
+    connection_transport_types: ConnectionTransportTypeRow[] | null;
+  };
+
+  for (const row of (data || []) as unknown as ConnectionRow[]) {
     addConn(row.from_id, row.to_id);
     if (row.is_bidirectional) {
       addConn(row.to_id, row.from_id);
@@ -58,48 +79,55 @@ async function getConnectionMaps(supabase: ReturnType<typeof createClient>): Pro
 
     const distanceKm: number = row.distance_km ?? 0;
 
-    // Pick the fastest transport that covers the forward direction (from→to)
-    // Fall back to walking (5 km/h) if no transport is registered.
     const forwardOptions = (row.connection_transport_types ?? []).filter(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (ctt: any) => ctt.is_forward === true || ctt.is_forward === null
+      (ctt) => ctt.is_forward === true || ctt.is_forward === null
     );
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const fastest = forwardOptions.reduce((best: any, ctt: any) => {
-      const speed = ctt.transport_types?.speed_kmh ?? 0;
-      return speed > (best?.transport_types?.speed_kmh ?? 0) ? ctt : best;
-    }, null);
 
-    const forwardDetail: ConnectionDetail = {
-      toId: row.to_id,
-      distanceKm,
-      transportSlug: fastest?.transport_types?.slug ?? 'on_foot',
-      speedKmh: fastest?.transport_types?.speed_kmh ?? 5,
-      baseCostMultiplier: fastest?.transport_types?.base_cost_multiplier ?? 0,
-    };
-    detailMap.set(`${row.from_id}:${row.to_id}`, forwardDetail);
+    if (forwardOptions.length === 0) {
+      // Fallback: walking only
+      addDetail(`${row.from_id}:${row.to_id}`, {
+        toId: row.to_id,
+        distanceKm,
+        transportSlug: 'on_foot',
+        speedKmh: 5,
+        baseCostMultiplier: 0,
+      });
+    } else {
+      for (const ctt of forwardOptions) {
+        const tt = ctt.transport_types;
+        addDetail(`${row.from_id}:${row.to_id}`, {
+          toId: row.to_id,
+          distanceKm,
+          transportSlug: tt?.slug ?? 'on_foot',
+          speedKmh: tt?.speed_kmh ?? 5,
+          baseCostMultiplier: tt?.base_cost_multiplier ?? 0,
+        });
+      }
+    }
 
     if (row.is_bidirectional) {
-      // Reverse direction — pick fastest transport with is_forward = false, or reuse forward
       const reverseOptions = (row.connection_transport_types ?? []).filter(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (ctt: any) => ctt.is_forward === false
+        (ctt) => ctt.is_forward === false
       );
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const fastestRev = reverseOptions.reduce((best: any, ctt: any) => {
-        const speed = ctt.transport_types?.speed_kmh ?? 0;
-        return speed > (best?.transport_types?.speed_kmh ?? 0) ? ctt : best;
-      }, null);
 
-      const reverseDetail: ConnectionDetail = {
-        toId: row.from_id,
-        distanceKm,
-        transportSlug: fastestRev?.transport_types?.slug ?? forwardDetail.transportSlug,
-        speedKmh: fastestRev?.transport_types?.speed_kmh ?? forwardDetail.speedKmh,
-        baseCostMultiplier:
-          fastestRev?.transport_types?.base_cost_multiplier ?? forwardDetail.baseCostMultiplier,
-      };
-      detailMap.set(`${row.to_id}:${row.from_id}`, reverseDetail);
+      if (reverseOptions.length === 0) {
+        // Mirror forward options for reverse direction
+        const fwdDetails = detailMap.get(`${row.from_id}:${row.to_id}`) ?? [];
+        for (const fwd of fwdDetails) {
+          addDetail(`${row.to_id}:${row.from_id}`, { ...fwd, toId: row.from_id });
+        }
+      } else {
+        for (const ctt of reverseOptions) {
+          const tt = ctt.transport_types;
+          addDetail(`${row.to_id}:${row.from_id}`, {
+            toId: row.from_id,
+            distanceKm,
+            transportSlug: tt?.slug ?? 'on_foot',
+            speedKmh: tt?.speed_kmh ?? 5,
+            baseCostMultiplier: tt?.base_cost_multiplier ?? 0,
+          });
+        }
+      }
     }
   }
 
@@ -120,9 +148,11 @@ export async function getAllLocations(): Promise<Location[]> {
 
   return (locResult.data || []).map((loc) => {
     const connectedLocationIds = connectionMap.get(loc.id) ?? [];
-    const connections: ConnectionDetail[] = connectedLocationIds
-      .map((toId) => detailMap.get(`${loc.id}:${toId}`))
-      .filter((d): d is ConnectionDetail => d !== undefined);
+    // Collect all transport options for each outbound leg, sorted slowest→fastest
+    const connections: ConnectionDetail[] = connectedLocationIds.flatMap((toId) => {
+      const options = detailMap.get(`${loc.id}:${toId}`) ?? [];
+      return options.slice().sort((a, b) => a.speedKmh - b.speedKmh);
+    });
 
     return {
       id: loc.id,

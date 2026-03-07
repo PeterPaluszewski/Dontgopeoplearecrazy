@@ -14,9 +14,14 @@ import { calculateGlobeQuaternion } from '@/lib/globe-utils';
 import { findLocationById, getDefaultLocation } from '@/lib/location-utils';
 import { appendToRoute, areDirectlyConnected } from '@/lib/route-utils';
 import { createClient } from '@/lib/supabase';
-import { calculateTravelCost, calculateTravelDays, getConnectionDetail } from '@/lib/travel-utils';
+import {
+  calculateTravelCost,
+  calculateTravelDays,
+  getAllConnectionOptions,
+  getConnectionDetail,
+} from '@/lib/travel-utils';
 import { useGameStore } from '@/store/gameStore';
-import type { Location } from '@/types/game';
+import type { ConnectionDetail, Location } from '@/types/game';
 import type { User } from '@supabase/supabase-js';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
@@ -162,15 +167,14 @@ export default function GamePage() {
     setTravelModalOpen(true);
   };
 
-  const handleTravelConfirm = async () => {
+  const handleTravelConfirm = async (chosenOption: ConnectionDetail) => {
     if (!travelDestination) return;
 
-    const connection = getConnectionDetail(locations, currentLocationId, travelDestination.id);
-    const travelDays = calculateTravelDays(connection.distanceKm, connection.speedKmh);
+    const travelDays = calculateTravelDays(chosenOption.distanceKm, chosenOption.speedKmh);
     const cost = calculateTravelCost(
       travelDays,
       travelDestination.difficultyMultiplier,
-      connection.baseCostMultiplier
+      chosenOption.baseCostMultiplier
     );
     travelToLocation(travelDestination.id, cost, travelDays);
 
@@ -432,16 +436,15 @@ export default function GamePage() {
         {/* Travel Modal */}
         {travelDestination &&
           (() => {
-            const conn = getConnectionDetail(locations, currentLocationId, travelDestination.id);
-            const days = calculateTravelDays(conn.distanceKm, conn.speedKmh);
+            const connectionOptions = getAllConnectionOptions(
+              locations,
+              currentLocationId,
+              travelDestination.id
+            );
             return (
               <TravelModal
                 destination={travelDestination}
-                travelDays={days}
-                travelDistanceKm={conn.distanceKm}
-                travelSpeedKmh={conn.speedKmh}
-                travelTransportSlug={conn.transportSlug}
-                travelBaseCostMultiplier={conn.baseCostMultiplier}
+                connectionOptions={connectionOptions}
                 isOpen={travelModalOpen}
                 onClose={() => setTravelModalOpen(false)}
                 onConfirm={handleTravelConfirm}
